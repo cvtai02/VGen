@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.turbo/
+.env
+*.log
+tmp/
+app/config/settings.local.json
+app/tmp/
+ui/dist/
+api-clients/dist/
+api-mcp-server/dist/

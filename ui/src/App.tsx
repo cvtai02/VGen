@@ -1,25 +1,34 @@
-import { Settings, Clapperboard, ListVideo, PlaySquare } from "lucide-react";
+import { ListVideo, Video, Layers, Settings } from "lucide-react";
 import { useState } from "react";
-import { CreateCompositeRenderPage } from "./pages/CreateCompositeRenderPage.js";
-import { CreateIntroRenderPage } from "./pages/CreateIntroRenderPage.js";
+import { CreateZhihugenRenderPage } from "./pages/CreateZhihugenRenderPage.js";
 import { RenderJobsPage } from "./pages/RenderJobsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 
-type Page = "settings" | "composite" | "intro" | "jobs";
+type Page = "zhihugen" | "jobs" | "settings";
 
 export function App() {
   const [page, setPage] = useState<Page>("jobs");
   return (
     <main className="shell">
       <nav className="nav">
-        <button className={page === "jobs" ? "active" : ""} onClick={() => setPage("jobs")} title="Jobs"><ListVideo size={18} /> Jobs</button>
-        <button className={page === "composite" ? "active" : ""} onClick={() => setPage("composite")} title="Composite"><Clapperboard size={18} /> Composite</button>
-        <button className={page === "intro" ? "active" : ""} onClick={() => setPage("intro")} title="Intro"><PlaySquare size={18} /> Intro</button>
-        <button className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")} title="Settings"><Settings size={18} /> Settings</button>
+        <div className="nav-logo">
+          <div className="nav-logo-icon"><Video size={16} /></div>
+          <span className="nav-logo-text">VGen</span>
+        </div>
+        <div className="nav-links">
+          <button className={page === "jobs" ? "active" : ""} onClick={() => setPage("jobs")}>
+            <ListVideo size={16} className="nav-icon" /><span className="nav-label">Jobs</span>
+          </button>
+          <button className={page === "zhihugen" ? "active" : ""} onClick={() => setPage("zhihugen")}>
+            <Layers size={16} className="nav-icon" /><span className="nav-label">Zhihugen</span>
+          </button>
+          <button className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>
+            <Settings size={16} className="nav-icon" /><span className="nav-label">Settings</span>
+          </button>
+        </div>
       </nav>
       {page === "jobs" && <RenderJobsPage />}
-      {page === "composite" && <CreateCompositeRenderPage />}
-      {page === "intro" && <CreateIntroRenderPage />}
+      {page === "zhihugen" && <CreateZhihugenRenderPage />}
       {page === "settings" && <SettingsPage />}
     </main>
   );

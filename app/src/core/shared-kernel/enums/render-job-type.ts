@@ -1,4 +1,5 @@
 export enum RenderJobType {
   Composite = "Composite",
-  Intro = "Intro"
+  Intro = "Intro",
+  Zhihugen = "Zhihugen"
 }

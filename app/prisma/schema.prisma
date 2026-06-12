@@ -3,16 +3,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model SystemSettings {
+  id           Int      @id @default(1)
+  settingsJson String   @default("{}")
+  updatedAt    DateTime @updatedAt
 }
 
 model RenderJob {
   id           String    @id
   type         String
   status       String
-  requestJson  Json
-  resultJson   Json?
+  requestJson  String
+  resultJson   String?
   errorMessage String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -31,7 +37,7 @@ model RenderAsset {
   source       String
   url          String
   localPath    String?
-  metadataJson Json?
+  metadataJson String?
   createdAt    DateTime @default(now())
 
   renderJob RenderJob @relation(fields: [renderJobId], references: [id])
@@ -42,7 +48,7 @@ model RenderJobEvent {
   renderJobId  String
   level        String
   message      String
-  metadataJson Json?
+  metadataJson String?
   createdAt    DateTime @default(now())
 
   renderJob RenderJob @relation(fields: [renderJobId], references: [id])

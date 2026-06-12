@@ -1,17 +1,9 @@
 import { z } from "zod";
 
-export const settingsSchema = z.object({
+export const runtimeSettingsSchema = z.object({
   app: z.object({
     baseUrl: z.string().url(),
-    publicBaseUrl: z.string().url(),
-    adminAccessToken: z.string().min(1)
-  }),
-  database: z.object({
-    provider: z.literal("postgresql"),
-    url: z.string().min(1)
-  }),
-  redis: z.object({
-    url: z.string().min(1)
+    publicBaseUrl: z.string().url()
   }),
   render: z.object({
     defaultWidth: z.number().int().positive(),
@@ -22,15 +14,13 @@ export const settingsSchema = z.object({
     concurrency: z.number().int().positive()
   }),
   storage: z.object({
-    provider: z.enum(["mock", "internal-api"]),
-    internalApiBaseUrl: z.string(),
-    accessToken: z.string()
+    baseUrl: z.string(),
+    accessToken: z.string(),
+    absolutePathPrefix: z.string()
   }),
   tts: z.object({
-    provider: z.enum(["mock", "internal-api"]),
-    internalApiBaseUrl: z.string(),
-    accessToken: z.string(),
-    defaultVoice: z.string().min(1)
+    baseUrl: z.string(),
+    apiKey: z.string()
   }),
   mediaSource: z.object({
     provider: z.enum(["mock", "internal-api"]),
@@ -41,8 +31,47 @@ export const settingsSchema = z.object({
   featureFlags: z.object({
     enableFetchMediaByDescription: z.boolean(),
     enableIntroVideoFlow: z.boolean(),
-    enableCompositeVideoFlow: z.boolean()
+    enableCompositeVideoFlow: z.boolean(),
+    enableZhihugenFlow: z.boolean()
   })
 });
 
-export type RuntimeSettings = z.infer<typeof settingsSchema>;
+export type RuntimeSettings = z.infer<typeof runtimeSettingsSchema>;
+
+export const settingsSchema = runtimeSettingsSchema;
+
+export const defaultSettings: RuntimeSettings = {
+  app: {
+    baseUrl: "http://localhost:3000",
+    publicBaseUrl: "http://localhost:3000"
+  },
+  render: {
+    defaultWidth: 1080,
+    defaultHeight: 1920,
+    defaultFps: 30,
+    defaultFormat: "mp4",
+    outputDirectory: "./tmp/renders",
+    concurrency: 1
+  },
+  storage: {
+    baseUrl: "",
+    accessToken: "",
+    absolutePathPrefix: ""
+  },
+  tts: {
+    baseUrl: "",
+    apiKey: ""
+  },
+  mediaSource: {
+    provider: "mock",
+    internalApiBaseUrl: "",
+    accessToken: "",
+    enableDescriptionSearch: false
+  },
+  featureFlags: {
+    enableFetchMediaByDescription: false,
+    enableIntroVideoFlow: true,
+    enableCompositeVideoFlow: true,
+    enableZhihugenFlow: true
+  }
+};

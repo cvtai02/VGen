@@ -6,8 +6,6 @@
     "dev:app": "pnpm --filter app dev",
     "dev:ui": "pnpm --filter ui dev",
     "dev:worker": "pnpm --filter app worker:dev",
-    "db:migrate": "pnpm --filter app db:migrate",
-    "sync:dtos": "pnpm --filter api-clients sync:dtos",
-    "smoke": "pnpm --filter api-mcp-server smoke"
+    "db:migrate": "pnpm --filter app db:migrate"
   }
 }

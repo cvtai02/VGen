@@ -12,7 +12,7 @@ export class GetRenderJobUseCase {
       id: job.id,
       type: job.type as RenderJobResultDto["type"],
       status: job.status as RenderJobResultDto["status"],
-      output: job.resultJson as unknown as RenderJobResultDto["output"] | undefined,
+      output: job.resultJson ? (JSON.parse(job.resultJson) as RenderJobResultDto["output"]) : undefined,
       error: job.errorMessage ? { message: job.errorMessage } : undefined,
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString()

@@ -1,4 +1,4 @@
-import type { MediaSourceClient, MediaSourceResult } from "../../../core/shared-kernel/contracts/media-source-client.js";
+import type { MediaSourceClient, MediaSourceResult, MediaStreamsResult } from "../../../core/shared-kernel/contracts/media-source-client.js";
 
 export class MockMediaSourceClient implements MediaSourceClient {
   async getDefaultVideo(): Promise<MediaSourceResult> {
@@ -15,5 +15,19 @@ export class MockMediaSourceClient implements MediaSourceClient {
 
   async findMusicByDescription(description: string): Promise<MediaSourceResult> {
     return { url: `mock://media/music/${encodeURIComponent(description)}.mp3`, source: "description" };
+  }
+
+  async findStreamsByDescription(description: string): Promise<MediaStreamsResult> {
+    return {
+      items: [
+        {
+          id: `mock-stream-1`,
+          name: `${description}.mp4`,
+          mimeType: "video/mp4",
+          path: `/mock/streams/${encodeURIComponent(description)}.mp4`,
+          cdnUrl: `mock://media/streams/${encodeURIComponent(description)}.mp4`
+        }
+      ]
+    };
   }
 }

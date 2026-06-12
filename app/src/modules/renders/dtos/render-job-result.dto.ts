@@ -3,7 +3,7 @@ import type { RenderJobOutputDto } from "./render-job-output.dto.js";
 
 export interface RenderJobResultDto {
   id: string;
-  type: "Composite" | "Intro";
+  type: "Composite" | "Intro" | "Zhihugen";
   status: "Pending" | "Rendering" | "Completed" | "Failed" | "Cancelled";
   output?: RenderJobOutputDto;
   error?: RenderJobErrorDto;

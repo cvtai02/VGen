@@ -1,31 +1,42 @@
 # VGen
 
-VGen is a video generation service for creating composite, intro, and zhihugen videos through async render jobs.
+VGen is a video generation service with a Fastify API and an admin UI for runtime configuration and render job operations.
 
 ## Folders
 
-- `app/` — Fastify API, use cases, Prisma schema, infrastructure adapters, Remotion templates, and workers.
-- `ui/` — Admin UI for settings, render job creation, and job status monitoring.
-- `handoffs/` — Backend/UI coordination documents. Completed handoffs live in `handoffs/archive/`.
+- `app/` - Main business source code. Exposes the application APIs, Prisma schema, use cases, infrastructure adapters, and Remotion templates.
+- `ui/` - Admin interface for logging in with the system secret, configuring runtime settings, creating Zhihugen render jobs, and reviewing job status.
+- `handoffs/` - Temporary coordination documents between backend and UI work.
+  - `handoffs/backend-to-ui/` - Backend API contract changes for UI follow-up.
+  - `handoffs/backend-to-ui/archive/` - Completed backend-to-UI handoffs.
+  - `handoffs/ui-to-backend/` - UI requirements that need backend support.
+  - `handoffs/ui-to-backend/archive/` - Completed UI-to-backend handoffs.
+- `rules.md` - Project rules for structure, architecture, settings, migrations, tests, and handoffs.
+- `AGENTS.md` - Instructions for AI agents working in this project.
+- `CLAUDE.md` - Instructions for Claude working in this project.
 
 ## Bootstrap
 
-Copy `.env.example` to `.env` and fill in your values before starting:
+`app/.env` contains only bootstrap settings:
 
+```env
+SYSTEM_SECRET=your-admin-login-secret
+ENCRYPTION_KEY=your-runtime-settings-encryption-key
+DATABASE_CONNECTION_STRING=postgresql://user:password@host:5432/vgen?sslmode=require
+DATABASE_SSL=require
 ```
-SYSTEM_TOKEN=your-admin-token
-DATABASE_URL=postgresql://vgen:vgen@localhost:5432/vgen
-```
+
+`ui` reads its API URL from `VITE_API_BASE_URL`; when omitted it uses `http://localhost:3000`.
 
 ## Development
 
-```
+```bash
 pnpm install
-docker compose up -d
-cd app && npm run db:migrate   # first run only
-pnpm dev:app
-pnpm dev:ui
-pnpm dev:worker
+pnpm --filter app db:generate
+pnpm --filter app db:migrate
+pnpm dev
 ```
 
-Agents must read `rules.md` and the nearest `index.md` / `rules.md` before editing code.
+The API listens on `http://localhost:3000` by default. The UI listens on `http://localhost:5173`.
+
+Agents must read this file and `rules.md` before editing code. Inside `app/` or `ui/`, also read the nearest `index.md` and `rules.md`.

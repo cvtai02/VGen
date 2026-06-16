@@ -10,6 +10,8 @@ import { ZhihugenStore } from "./modules/zhihugen/store/zhihugen-store.js";
 import { ExecuteRenderJobUseCase } from "./modules/renders/usecases/execute-render-job.usecase.js";
 import { ConfirmUploadRenderJobUseCase } from "./modules/renders/usecases/confirm-upload-render-job.usecase.js";
 import { MarkRenderJobFailedUseCase } from "./modules/renders/usecases/mark-render-job-failed.usecase.js";
+import { CreateAdminAccessTokenUseCase } from "./modules/auth/usecases/create-admin-access-token.usecase.js";
+import { VerifyAdminAccessTokenUseCase } from "./modules/auth/usecases/verify-admin-access-token.usecase.js";
 
 export interface AppContainer {
   settings: RuntimeSettings;
@@ -18,20 +20,27 @@ export interface AppContainer {
   prisma: typeof prismaClient;
   renderLimiter: ConcurrencyLimiter;
   idGenerator: IdGenerator;
+  createAdminAccessTokenUseCase: CreateAdminAccessTokenUseCase;
+  verifyAdminAccessTokenUseCase: VerifyAdminAccessTokenUseCase;
   executeRenderJobUseCase: ExecuteRenderJobUseCase;
   confirmUploadRenderJobUseCase: ConfirmUploadRenderJobUseCase;
   markRenderJobFailedUseCase: MarkRenderJobFailedUseCase;
 }
 
 export async function createContainer(): Promise<AppContainer> {
-  const systemSecret = process.env.SYSTEM_SECRET ?? "dev-secret";
-  const settingsLoader = new SettingsLoader(prismaClient, systemSecret);
+  const systemSecret = process.env.SYSTEM_SECRET;
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!systemSecret) throw new Error("SYSTEM_SECRET must be set.");
+  if (!encryptionKey) throw new Error("ENCRYPTION_KEY must be set.");
+
+  const settingsLoader = new SettingsLoader(prismaClient, encryptionKey);
   const settings = await settingsLoader.load();
 
   const zhihugenStore = new ZhihugenStore(prismaClient);
   const idGenerator: IdGenerator = { createId: () => randomUUID() };
   const renderEngine = new ZhihugenRenderEngine(() => settings.tts);
   const storage = new SevenRouterStorageClient(() => settings.storage);
+  const issuedAdminTokens = new Set<string>();
 
   return {
     settings,
@@ -40,6 +49,8 @@ export async function createContainer(): Promise<AppContainer> {
     prisma: prismaClient,
     renderLimiter: new ConcurrencyLimiter(3),
     idGenerator,
+    createAdminAccessTokenUseCase: new CreateAdminAccessTokenUseCase(systemSecret, issuedAdminTokens),
+    verifyAdminAccessTokenUseCase: new VerifyAdminAccessTokenUseCase(issuedAdminTokens),
     executeRenderJobUseCase: new ExecuteRenderJobUseCase(prismaClient, renderEngine, storage),
     confirmUploadRenderJobUseCase: new ConfirmUploadRenderJobUseCase(prismaClient, storage),
     markRenderJobFailedUseCase: new MarkRenderJobFailedUseCase(prismaClient)

@@ -1,17 +1,22 @@
 import multipart from "@fastify/multipart";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, basename } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import { apiError } from "../../../core/shared-kernel/api-error.js";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import { RenderJobType } from "../../../core/shared-kernel/enums/render-job-type.js";
 import type { AppContainer } from "../../../container.js";
 import { generateJobId, generateOutputFilename, type ZhihugenJobRequest } from "../store/job-helpers.js";
 
+function sanitizeFilename(name: string): string {
+  return basename(name).replace(/[^a-zA-Z0-9._-]/g, "_") || "image";
+}
+
 async function createAndRender(container: AppContainer, req: ZhihugenJobRequest, reply: { code: (n: number) => { send: (b: unknown) => unknown } }) {
   if (container.renderLimiter.isFull) {
-    return reply.code(429).send({ message: "Too many renders in progress. Try again later." });
+    return reply.code(429).send(apiError(429, "Too Many Requests", "Too many renders in progress. Try again later."));
   }
 
   const id = generateJobId();
@@ -34,7 +39,7 @@ async function createAndRender(container: AppContainer, req: ZhihugenJobRequest,
     return { absolutePath: result.absolutePath };
   } catch (error) {
     await container.markRenderJobFailedUseCase.execute(id, error).catch(() => {});
-    return reply.code(500).send({ message: error instanceof Error ? error.message : "Render failed." });
+    return reply.code(500).send(apiError(500, "Internal Server Error", error instanceof Error ? error.message : "Render failed."));
   }
 }
 
@@ -51,23 +56,34 @@ export async function registerZhihugenRenderApis(app: FastifyInstance, container
     let label = "";
     let previewBeforeUpload = false;
 
-    await mkdir(tmpDir, { recursive: true });
-    for await (const part of request.parts()) {
-      if (part.type === "file" && part.fieldname === "images") {
-        const buf = await part.toBuffer();
-        const dest = join(tmpDir, `${imagePaths.length}_${part.filename ?? "image"}`);
-        await writeFile(dest, buf);
-        imagePaths.push(dest);
-      } else if (part.type === "field") {
-        const val = part.value as string;
-        if (part.fieldname === "scripts") scripts.push(val);
-        else if (part.fieldname === "label") label = val;
-        else if (part.fieldname === "previewBeforeUpload") previewBeforeUpload = val === "true";
+    try {
+      await mkdir(tmpDir, { recursive: true });
+      for await (const part of request.parts()) {
+        if (part.type === "file" && part.fieldname === "images") {
+          const buf = await part.toBuffer();
+          const dest = join(tmpDir, `${imagePaths.length}_${sanitizeFilename(part.filename ?? "image")}`);
+          await writeFile(dest, buf);
+          imagePaths.push(dest);
+        } else if (part.type === "field") {
+          const val = part.value as string;
+          if (part.fieldname === "scripts") scripts.push(val);
+          else if (part.fieldname === "label") label = val.slice(0, 500);
+          else if (part.fieldname === "previewBeforeUpload") previewBeforeUpload = val === "true";
+        }
       }
+    } catch (err) {
+      await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+      throw err;
     }
 
-    if (imagePaths.length === 0) return reply.code(400).send({ message: "No images provided." });
-    if (!label.trim()) return reply.code(400).send({ message: "Label is required." });
+    if (imagePaths.length === 0) {
+      await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+      return reply.code(400).send(apiError(400, "Bad Request", "No images provided."));
+    }
+    if (!label.trim()) {
+      await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+      return reply.code(400).send(apiError(400, "Bad Request", "Label is required."));
+    }
 
     const req: ZhihugenJobRequest = {
       images: imagePaths,

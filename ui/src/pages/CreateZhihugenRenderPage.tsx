@@ -1,5 +1,5 @@
 import { Plus, Trash2, Loader, Copy, Upload, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zhihugenClient } from "../api/clients.js";
 
 interface Scene {
@@ -16,6 +16,26 @@ export function CreateZhihugenRenderPage() {
   const [error, setError] = useState("");
   const [absolutePath, setAbsolutePath] = useState("");
   const [previewJobId, setPreviewJobId] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState("");
+
+  useEffect(() => {
+    if (!previewJobId) {
+      setPreviewSrc("");
+      return;
+    }
+
+    let objectUrl = "";
+    zhihugenClient.previewBlob(previewJobId)
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewSrc(objectUrl);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Preview failed."));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [previewJobId]);
 
   function addScene() { setScenes((s) => [...s, { file: null, script: "" }]); }
   function removeScene(i: number) { setScenes((s) => s.filter((_, j) => j !== i)); }
@@ -152,11 +172,13 @@ export function CreateZhihugenRenderPage() {
           <div className="job-result-row">
             <span className="badge" style={{ background: "var(--accent)", color: "#fff" }}>preview ready</span>
           </div>
-          <video
-            src={zhihugenClient.previewUrl(previewJobId)}
-            controls
-            style={{ width: "100%", maxHeight: 400, marginTop: 12, borderRadius: 6, background: "#000" }}
-          />
+          {previewSrc && (
+            <video
+              src={previewSrc}
+              controls
+              style={{ width: "100%", maxHeight: 400, marginTop: 12, borderRadius: 6, background: "#000" }}
+            />
+          )}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="btn btn-primary" onClick={confirmUpload} disabled={uploading}>
               {uploading ? <><Loader size={13} className="spin" /> Uploading…</> : <><Upload size={13} /> Upload to storage</>}

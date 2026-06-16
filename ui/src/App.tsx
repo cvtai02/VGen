@@ -1,5 +1,6 @@
-import { ListVideo, Video, Layers, Settings } from "lucide-react";
+import { KeyRound, ListVideo, Loader, LogOut, Video, Layers, Settings } from "lucide-react";
 import { useState } from "react";
+import { authClient, clearAuthToken, getAuthToken, setAuthToken } from "./api/clients.js";
 import { CreateZhihugenRenderPage } from "./pages/CreateZhihugenRenderPage.js";
 import { RenderJobsPage } from "./pages/RenderJobsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -8,6 +9,59 @@ type Page = "zhihugen" | "jobs" | "settings";
 
 export function App() {
   const [page, setPage] = useState<Page>("jobs");
+  const [token, setToken] = useState(() => getAuthToken());
+  const [systemSecret, setSystemSecret] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  async function login() {
+    setLoginError("");
+    setLoggingIn(true);
+    try {
+      const response = await authClient.login(systemSecret);
+      setAuthToken(response.accessToken);
+      setToken(response.accessToken);
+      setSystemSecret("");
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "Login failed.");
+    } finally {
+      setLoggingIn(false);
+    }
+  }
+
+  function logout() {
+    clearAuthToken();
+    setToken("");
+    setPage("jobs");
+  }
+
+  if (!token) {
+    return (
+      <main className="login-shell">
+        <section className="login-panel">
+          <div className="login-icon"><KeyRound size={18} /></div>
+          <h1 className="login-title">VGen Admin</h1>
+          {loginError && <div className="settings-error">{loginError}</div>}
+          <div className="form-group">
+            <label className="form-label">System secret</label>
+            <input
+              type="password"
+              value={systemSecret}
+              autoFocus
+              onChange={(event) => setSystemSecret(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && systemSecret.trim()) void login();
+              }}
+            />
+          </div>
+          <button className="btn btn-primary login-button" onClick={login} disabled={loggingIn || !systemSecret.trim()}>
+            {loggingIn ? <><Loader size={13} className="spin" /> Signing in...</> : <><KeyRound size={13} /> Sign in</>}
+          </button>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="shell">
       <nav className="nav">
@@ -26,6 +80,9 @@ export function App() {
             <Settings size={16} className="nav-icon" /><span className="nav-label">Settings</span>
           </button>
         </div>
+        <button className="nav-logout" onClick={logout} title="Sign out">
+          <LogOut size={16} />
+        </button>
       </nav>
       {page === "jobs" && <RenderJobsPage />}
       {page === "zhihugen" && <CreateZhihugenRenderPage />}

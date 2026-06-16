@@ -132,6 +132,63 @@ button, input, textarea, select {
   font-weight: 500;
 }
 
+.nav-logout {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  height: 52px;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  width: 100%;
+}
+
+.nav-logout:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.login-shell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.login-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: min(100%, 380px);
+}
+
+.login-icon {
+  align-items: center;
+  background: var(--accent);
+  border-radius: var(--radius-sm);
+  color: #000;
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  margin-bottom: 18px;
+  width: 34px;
+}
+
+.login-title {
+  font-size: 20px;
+  margin: 0 0 20px;
+}
+
+.login-button {
+  justify-content: center;
+  width: 100%;
+}
+
 /* ── Page panel ── */
 
 .panel {
@@ -247,23 +304,6 @@ textarea.short {
   min-height: 120px;
 }
 
-.check-row {
-  align-items: center;
-  display: flex;
-  gap: 8px;
-}
-
-.check-row input[type="checkbox"] {
-  accent-color: var(--accent);
-  height: 15px;
-  width: 15px;
-}
-
-.check-label {
-  color: var(--text-secondary);
-  font-size: 13px;
-}
-
 .actions {
   align-items: center;
   display: flex;
@@ -297,36 +337,8 @@ pre {
 }
 
 .badge-pending   { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-.badge-active    { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 .badge-completed { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
-.badge-done      { background: rgba(34, 197, 94, 0.15);  color: #4ade80; }
 .badge-failed    { background: rgba(239, 68, 68, 0.15);  color: #f87171; }
-.badge-default   { background: var(--surface-2);         color: var(--text-secondary); }
-
-/* ── Mode tabs ── */
-
-.mode-tabs {
-  display: flex;
-  gap: 4px;
-}
-
-.mode-tab {
-  align-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 12px;
-  font-weight: 500;
-  gap: 6px;
-  padding: 6px 12px;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.mode-tab:hover { color: var(--text); border-color: var(--border-light); }
-.mode-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
 /* ── Spin animation ── */
 
@@ -424,11 +436,6 @@ pre {
   white-space: nowrap;
 }
 
-.job-type {
-  color: var(--text-secondary);
-  font-size: 12px;
-}
-
 .job-output a {
   color: var(--accent);
   font-size: 12px;
@@ -479,59 +486,12 @@ pre {
 
 /* ── Settings sections ── */
 
-.settings-section {
-  border-top: 1px solid var(--border);
-  margin-bottom: 4px;
-  padding-top: 22px;
-  margin-top: 18px;
-}
-
 .settings-section-title {
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.1px;
   margin-bottom: 16px;
-}
-
-.settings-restart-note {
-  color: var(--warning);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.2px;
-  margin-left: 6px;
-  text-transform: uppercase;
-}
-
-/* ── Feature flags grid ── */
-
-.flags-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr 1fr;
-}
-
-.flag-row {
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  transition: border-color 0.15s;
-}
-
-.flag-row:hover {
-  border-color: var(--border-light);
-}
-
-.flag-row input[type="checkbox"] {
-  accent-color: var(--accent);
-  flex-shrink: 0;
-  height: 15px;
-  width: 15px;
 }
 
 /* ── Select ── */
@@ -551,15 +511,6 @@ select {
 select:focus {
   border-color: var(--accent);
   outline: none;
-}
-
-/* ── Two-column form row ── */
-
-.form-row-2 {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: 1fr 1fr;
-  margin-bottom: 4px;
 }
 
 /* ── Form section label ── */
@@ -794,34 +745,6 @@ select:focus {
 .fb-item-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fb-item-size { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
 
-/* ── Path-with-browse input ── */
-
-.path-browse-row {
-  align-items: center;
-  display: flex;
-  gap: 6px;
-}
-
-.path-browse-row input {
-  flex: 1;
-}
-
-.btn-browse {
-  background: var(--surface-2);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 0 10px;
-  height: 34px;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.btn-browse:hover { color: var(--text); border-color: var(--accent); }
-
 /* ── Responsive ── */
 
 @media (max-width: 760px) {
@@ -859,6 +782,13 @@ select:focus {
     width: auto;
   }
 
+  .nav-logout {
+    border-left: 1px solid var(--border);
+    border-top: 0;
+    flex: 0 0 52px;
+    height: auto;
+  }
+
   .panel {
     padding: 20px 16px;
   }
@@ -870,9 +800,5 @@ select:focus {
 
   .job-card-main {
     grid-column: 1 / -1;
-  }
-
-  .form-row-2 {
-    grid-template-columns: 1fr;
   }
 }

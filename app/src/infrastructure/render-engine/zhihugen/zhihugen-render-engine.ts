@@ -6,34 +6,42 @@ import { spawn } from "node:child_process";
 import type { RenderEngine, RenderEngineInput, RenderEngineOutput } from "../../../core/shared-kernel/contracts/render-engine.js";
 import type { ZhihugenJobRequest } from "../../../modules/zhihugen/store/job-helpers.js";
 
-const FFMPEG = "C:\\Users\\TaiChuVan\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffmpeg.exe";
-const FFPROBE = "C:\\Users\\TaiChuVan\\AppData\\Local\\Microsoft\\WinGet\\Packages\\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\\ffmpeg-8.1.1-full_build\\bin\\ffprobe.exe";
+const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
+const FFPROBE = process.env.FFPROBE_PATH ?? "ffprobe";
 
 // ── Process helpers ───────────────────────────────────────────────────────────
 
-function run(cmd: string, args: string[]): Promise<void> {
+const PROCESS_TIMEOUT_MS = 10 * 60 * 1000;
+
+function run(cmd: string, args: string[], timeoutMs = PROCESS_TIMEOUT_MS): Promise<void> {
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, { stdio: "pipe" });
     let stderr = "";
+    const timer = setTimeout(() => { proc.kill("SIGKILL"); reject(new Error(`${cmd} timed out after ${timeoutMs}ms`)); }, timeoutMs);
     proc.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
     proc.on("close", (code) => {
+      clearTimeout(timer);
       if (code === 0) resolve();
       else reject(new Error(`${cmd} exited ${code}: ${stderr.slice(-500)}`));
     });
+    proc.on("error", (err) => { clearTimeout(timer); reject(err); });
   });
 }
 
-function runCapture(cmd: string, args: string[]): Promise<string> {
+function runCapture(cmd: string, args: string[], timeoutMs = PROCESS_TIMEOUT_MS): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, { stdio: "pipe" });
     let stdout = "";
     let stderr = "";
+    const timer = setTimeout(() => { proc.kill("SIGKILL"); reject(new Error(`${cmd} timed out after ${timeoutMs}ms`)); }, timeoutMs);
     proc.stdout?.on("data", (d: Buffer) => { stdout += d.toString(); });
     proc.stderr?.on("data", (d: Buffer) => { stderr += d.toString(); });
     proc.on("close", (code) => {
+      clearTimeout(timer);
       if (code === 0) resolve(stdout.trim());
       else reject(new Error(`${cmd} exited ${code}: ${stderr.slice(-500)}`));
     });
+    proc.on("error", (err) => { clearTimeout(timer); reject(err); });
   });
 }
 

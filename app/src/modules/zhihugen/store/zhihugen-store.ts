@@ -43,25 +43,23 @@ export class ZhihugenStore {
   constructor(private readonly prisma: PrismaContext) {}
 
   async get(): Promise<ZhihugenStoreData> {
-    if (this.cache) return this.cache;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row = await (this.prisma as any).systemSettings.findFirst({ where: { id: STORE_ID } });
+    if (this.cache) return structuredClone(this.cache);
+    const row = await this.prisma.systemSettings.findFirst({ where: { id: STORE_ID } });
     if (!row) {
       this.cache = structuredClone(defaultData);
-      return this.cache;
+      return structuredClone(this.cache);
     }
     try {
-      this.cache = JSON.parse(row.settingsJson as string) as ZhihugenStoreData;
-      return this.cache;
+      this.cache = JSON.parse(row.settingsJson) as ZhihugenStoreData;
+      return structuredClone(this.cache);
     } catch {
       this.cache = structuredClone(defaultData);
-      return this.cache;
+      return structuredClone(this.cache);
     }
   }
 
   async save(data: ZhihugenStoreData): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (this.prisma as any).systemSettings.upsert({
+    await this.prisma.systemSettings.upsert({
       where: { id: STORE_ID },
       create: { id: STORE_ID, settingsJson: JSON.stringify(data) },
       update: { settingsJson: JSON.stringify(data) }

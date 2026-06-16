@@ -1,34 +1,79 @@
 # Project Rules
 
-## Architecture
+## Project Structure
 
-- Do not add a repository layer.
-- Do not add an abstraction layer on top of Prisma.
-- Prisma context belongs in the application core.
-- Use cases may depend directly on Prisma context.
-- Controllers/routes must call use cases.
-- Controllers/routes must not access infrastructure directly.
-- DTOs must be shared by API routes/controllers and use cases.
-- Infrastructure implementations must implement core/shared-kernel contracts.
+- `app/` contains the main business source code and application APIs.
+- `ui/` contains the admin interface.
+- `handoffs/` contains temporary backend/UI coordination documents.
+- `index.md`, `rules.md`, `AGENTS.md`, and `CLAUDE.md` must stay current at the root.
+- `app/` and `ui/` are the only workspace roots.
+
+Framework best practice takes priority inside each workspace root.
 
 ## Settings
 
-- Bootstrap settings (system token, database URL) live in `.env` only.
-- All runtime settings are stored in the `SystemSettings` database table (singleton row, id = 1).
-- Runtime settings are loaded from the database at startup and seeded with defaults on first run.
-- Settings must be viewable and editable from the admin UI.
-- Masked token values (`"********"`) must be restored from the stored value before saving.
-- Changing `redis.url` requires an application restart.
+- Only bootstrap settings live in `.env`: `SYSTEM_SECRET`, `ENCRYPTION_KEY`, `DATABASE_CONNECTION_STRING`, and optional `API_BASE_URL` / `VITE_API_BASE_URL`.
+- Runtime settings live in the database and must be viewable and editable from the admin UI.
+- Secret runtime settings stored in the database must be encrypted with `ENCRYPTION_KEY`.
+- Masked secret values sent as `********` must preserve the existing stored secret.
 
-## File Granularity
+## Admin UI And Auth
 
-- One use case per file.
-- One DTO per file.
-- One API endpoint or API boundary per file.
-- Registration files may compose APIs but must not contain endpoint business logic.
+- The admin UI logs in with `SYSTEM_SECRET`.
+- Protected API endpoints authenticate with `Authorization: Bearer <token>`.
+- Never use cookie sessions and never send tokens in query strings.
+- CORS must allow all origins, methods, and headers without credentials.
+
+## Architecture
+
+- Do not add a repository layer or abstraction layer on top of Prisma.
+- Prisma context belongs in `app/src/core/database/`.
+- Use cases may depend directly on Prisma context.
+- Routes/controllers call use cases where business behavior is involved.
+- Infrastructure implementations must implement contracts defined in the core/shared kernel.
+- Do not leak provider-specific infrastructure details into use cases or API handlers.
+
+## Modules
+
+- Each module should contain `usecases/`, `api/`, and `dtos/` where applicable.
+- Each use case must be in its own file.
+- Each API/controller boundary must be in its own file.
+- Each DTO must be in its own file.
+- DTOs should be shared by API handlers and use cases.
+
+## Core / Shared Kernel
+
+Shared kernel code may contain enums, constants, policies, value objects, shared types, infrastructure contracts, and cross-module concepts. Keep it stable and broadly reusable.
+
+## Entities And Aggregates
+
+- Entity classes must define and protect the constraints of that entity.
+- Use public and private properties/methods properly so invalid state cannot be created or persisted accidentally.
+- Aggregates must define and protect constraints involving relationships between multiple entities.
+- When Prisma returns plain objects instead of entity classes, validate invariants in use cases and shared value objects rather than introducing a mapping layer over Prisma.
+
+## API Errors
+
+All APIs return one JSON error shape:
+
+```json
+{ "statusCode": 401, "error": "Unauthorized", "message": "Missing or invalid bearer token." }
+```
+
+Changing this shape is an API contract change and must follow the handoff rules.
+
+## Database Migrations
+
+- All schema changes go through Prisma migrations.
+- Commit migrations with the code that requires them.
+- Never edit the database schema manually.
+
+## Testing
+
+A passing smoke test is required for every change. Unit tests are encouraged for shared value objects, policies, and non-trivial use cases.
 
 ## Handoffs
 
-- Every API contract change must create a backend-to-UI handoff in `handoffs/`.
-- Every UI requirement needing backend support must create a UI-to-backend handoff.
-- Completed handoffs must be moved to `handoffs/archive/`.
+- Backend API contract changes create a backend-to-UI handoff unless the UI change ships in the same change set.
+- UI requirements needing backend support create a UI-to-backend handoff.
+- Completed handoffs move into the matching `archive/` folder.

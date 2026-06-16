@@ -38,8 +38,6 @@ export const runtimeSettingsSchema = z.object({
 
 export type RuntimeSettings = z.infer<typeof runtimeSettingsSchema>;
 
-export const settingsSchema = runtimeSettingsSchema;
-
 export const defaultSettings: RuntimeSettings = {
   app: {
     baseUrl: "http://localhost:3000",

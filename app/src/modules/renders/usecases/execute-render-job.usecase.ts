@@ -1,5 +1,6 @@
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import type { PrismaContext } from "../../../core/database/prisma-context.js";
@@ -23,7 +24,12 @@ export class ExecuteRenderJobUseCase {
       data: { status: RenderJobStatus.Rendering, startedAt: new Date() }
     });
 
-    const req = JSON.parse(job.requestJson) as ZhihugenJobRequest;
+    let req: ZhihugenJobRequest;
+    try {
+      req = JSON.parse(job.requestJson) as ZhihugenJobRequest;
+    } catch {
+      throw new Error(`Corrupt requestJson for job ${renderJobId}`);
+    }
 
     // Download background video from 7router to a local tmp file
     const bgVideoLocalPath = join(tmpdir(), `bg_${randomUUID()}.mp4`);
@@ -31,11 +37,16 @@ export class ExecuteRenderJobUseCase {
 
     const destinationPath = `${req.outputDirectory.replace(/\/+$/, "")}/${req.outputFilename}`;
 
-    const output = await this.renderEngine.render({
-      renderJobId,
-      type: job.type,
-      request: { ...req, backgroundVideoLocalPath: bgVideoLocalPath }
-    });
+    let output;
+    try {
+      output = await this.renderEngine.render({
+        renderJobId,
+        type: job.type,
+        request: { ...req, backgroundVideoLocalPath: bgVideoLocalPath }
+      });
+    } finally {
+      await unlink(bgVideoLocalPath).catch(() => {});
+    }
 
     if (req.previewBeforeUpload) {
       await this.prisma.renderJob.update({
@@ -53,6 +64,8 @@ export class ExecuteRenderJobUseCase {
       destinationPath,
       contentType: "video/mp4"
     });
+
+    await unlink(output.localPath).catch(() => {});
 
     await this.prisma.renderJob.update({
       where: { id: renderJobId },

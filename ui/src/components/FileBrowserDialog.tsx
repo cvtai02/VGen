@@ -1,7 +1,6 @@
 import { ChevronRight, Folder, File, X, ArrowLeft, RefreshCw, Check } from "lucide-react";
 import { useEffect, useState } from "react";
-
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+import { apiBaseUrl, getAuthToken } from "../api/clients.js";
 
 interface BrowseItem {
   name: string;
@@ -37,7 +36,9 @@ export function FileBrowserDialog({ initialPath = "", onSelect, onClose }: FileB
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${apiBaseUrl}/api/storage/directories`);
+      const res = await fetch(`${apiBaseUrl}/api/storage/directories`, {
+        headers: { authorization: `Bearer ${getAuthToken()}` }
+      });
       if (!res.ok) throw new Error(`Failed to load directories: ${res.status}`);
       const data = (await res.json()) as { isAdmin: boolean; directories: { path: string; access: string }[] };
       const rootItems: BrowseItem[] = data.isAdmin
@@ -61,7 +62,9 @@ export function FileBrowserDialog({ initialPath = "", onSelect, onClose }: FileB
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${apiBaseUrl}/api/storage/browse?path=${encodeURIComponent(target)}`);
+      const res = await fetch(`${apiBaseUrl}/api/storage/browse?path=${encodeURIComponent(target)}`, {
+        headers: { authorization: `Bearer ${getAuthToken()}` }
+      });
       if (!res.ok) throw new Error(`Browse failed: ${res.status}`);
       const data = (await res.json()) as { items: BrowseItem[] };
       const sorted = [...(data.items ?? [])].sort((a, b) => {

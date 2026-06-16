@@ -1,38 +1,45 @@
 # App
 
-Fastify API server, use cases, Prisma schema, infrastructure adapters, Remotion render engine, and BullMQ workers.
-
-## Architecture
-
-Routes call use cases. Use cases may use Prisma context directly. Infrastructure implements shared-kernel contracts.
+Fastify API server, Prisma schema, runtime settings loader, infrastructure adapters, Remotion templates, and render use cases.
 
 ## Bootstrap
 
-`SYSTEM_TOKEN` and `DATABASE_URL` are read from `.env`. All other settings are stored in the `SystemSettings` DB table and loaded at startup via `SettingsLoader`.
+`app/.env` contains:
+
+- `SYSTEM_SECRET` - admin login secret.
+- `ENCRYPTION_KEY` - encryption key for secret runtime settings stored in the database.
+- `DATABASE_CONNECTION_STRING` - Prisma PostgreSQL connection string.
+- `DATABASE_SSL` - set to `require` when the database requires SSL.
+
+All other runtime settings are stored in the `SystemSettings` table and loaded at startup.
 
 ## Key Folders
 
-- `src/config/` — Settings schema, loader (DB-backed), defaults.
-- `src/core/` — Prisma client, shared-kernel contracts and enums.
-- `src/infrastructure/` — Queue (BullMQ), render engine (Remotion), storage (7router), TTS, media source adapters.
-- `src/modules/renders/` — Render job API, use cases, DTOs. Types: Composite, Intro, Zhihugen.
-- `src/modules/settings/` — Settings API, use cases, DTOs.
-- `src/workers/` — BullMQ render worker entry point.
-- `prisma/` — Database schema (`RenderJob`, `RenderAsset`, `RenderJobEvent`, `SystemSettings`).
+- `src/config/` - Runtime settings schema, defaults, encryption, and DB-backed loader.
+- `src/core/` - Prisma client/context and shared-kernel contracts, enums, and API error shape.
+- `src/infrastructure/` - Non-ORM infrastructure adapters such as render engines, storage, and concurrency.
+- `src/modules/auth/` - System-secret login and bearer token verification.
+- `src/modules/renders/` - Render job APIs, settings APIs, DTOs, and use cases.
+- `src/modules/zhihugen/` - Zhihugen render flow APIs and DB-backed feature settings.
+- `src/remotion/` - Remotion compositions and templates.
+- `prisma/` - PostgreSQL schema and migrations.
 
 ## APIs
 
 | Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/renders/composite` | Create composite render job |
-| POST | `/api/renders/intro` | Create intro render job |
-| POST | `/api/renders/zhihugen` | Create zhihugen render job |
-| GET | `/api/renders` | List render jobs |
-| GET | `/api/renders/:id` | Get render job status |
-| GET | `/api/settings` | Get runtime settings (tokens masked) |
-| PUT | `/api/settings` | Update runtime settings (requires SYSTEM_TOKEN) |
-| GET | `/api/health` | Health check |
+| --- | --- | --- |
+| POST | `/api/auth/login` | Exchange `SYSTEM_SECRET` for a bearer token |
+| GET | `/api/health` | Public health check |
+| GET | `/api/settings/storage` | Get storage settings with masked secrets |
+| POST | `/api/settings/storage` | Update storage settings |
+| GET | `/api/settings/tts` | Get TTS settings with masked secrets |
+| POST | `/api/settings/tts` | Update TTS settings |
+| GET | `/api/features/zhihugen/settings` | Get Zhihugen runtime settings |
+| POST | `/api/features/zhihugen/settings` | Update Zhihugen runtime settings |
+| GET | `/api/tts/models` | List TTS models |
+| POST | `/api/zhihugen/render` | Create a Zhihugen render job |
+| GET | `/api/zhihugen/jobs` | List Zhihugen jobs |
 
 ## Migrations
 
-Run `npm run db:migrate` after any `prisma/schema.prisma` change.
+Run `pnpm --filter app db:migrate` after any `prisma/schema.prisma` change.

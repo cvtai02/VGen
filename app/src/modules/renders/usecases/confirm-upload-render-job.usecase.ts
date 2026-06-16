@@ -14,7 +14,7 @@ export class ConfirmUploadRenderJobUseCase {
     private readonly storage: StorageClient
   ) {}
 
-  async execute(renderJobId: string): Promise<{ absolutePath: string }> {
+  async execute(renderJobId: string): Promise<{ absolutePath: string; cdnUrl?: string }> {
     const job = await this.prisma.renderJob.findUnique({ where: { id: renderJobId } });
     if (!job) throw new Error(`Render job not found: ${renderJobId}`);
     if (job.status !== RenderJobStatus.AwaitingUpload) throw new Error("Job is not awaiting upload.");

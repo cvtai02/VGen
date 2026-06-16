@@ -24,6 +24,26 @@ function JobDetail({
   const [job, setJob] = useState(initial);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+  const [previewSrc, setPreviewSrc] = useState("");
+
+  useEffect(() => {
+    if (job.status !== "awaiting_upload") {
+      setPreviewSrc("");
+      return;
+    }
+
+    let objectUrl = "";
+    zhihugenClient.previewBlob(job.jobId)
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewSrc(objectUrl);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Preview failed."));
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [job.jobId, job.status]);
 
   async function refresh() {
     const updated = await zhihugenClient.getJob(job.jobId);
@@ -58,8 +78,6 @@ function JobDetail({
     }
   }
 
-  const previewSrc = zhihugenClient.previewUrl(job.jobId);
-
   return (
     <section className="panel">
       <div className="page-header">
@@ -80,11 +98,13 @@ function JobDetail({
       {job.status === "awaiting_upload" && (
         <>
           <div className="form-section-label">Preview</div>
-          <video
-            src={previewSrc}
-            controls
-            style={{ width: "100%", maxHeight: 480, borderRadius: 6, background: "#000", display: "block" }}
-          />
+          {previewSrc && (
+            <video
+              src={previewSrc}
+              controls
+              style={{ width: "100%", maxHeight: 480, borderRadius: 6, background: "#000", display: "block" }}
+            />
+          )}
           <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button className="btn btn-primary" onClick={confirmUpload} disabled={uploading}>
               {uploading

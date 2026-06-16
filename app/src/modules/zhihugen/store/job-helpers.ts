@@ -1,20 +1,22 @@
+import { randomInt } from "node:crypto";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 
+function timestampSlug(): { date: string; time: string; rand: string } {
+  const d = new Date().toISOString();
+  return {
+    date: d.slice(0, 10).replace(/-/g, ""),
+    time: d.slice(11, 19).replace(/:/g, ""),
+    rand: randomInt(1_000_000).toString().padStart(6, "0")
+  };
+}
+
 export function generateJobId(): string {
-  const now = new Date();
-  const d = now.toISOString();
-  const date = d.slice(0, 10).replace(/-/g, "");
-  const time = d.slice(11, 19).replace(/:/g, "");
-  const rand = Math.floor(Math.random() * 1_000_000).toString().padStart(6, "0");
+  const { date, time, rand } = timestampSlug();
   return `job_${date}_${time}_${rand}`;
 }
 
 export function generateOutputFilename(): string {
-  const now = new Date();
-  const d = now.toISOString();
-  const date = d.slice(0, 10).replace(/-/g, "");
-  const time = d.slice(11, 19).replace(/:/g, "");
-  const rand = Math.floor(Math.random() * 1_000_000).toString().padStart(6, "0");
+  const { date, time, rand } = timestampSlug();
   return `${date}_${time}_${rand}.mp4`;
 }
 
@@ -48,6 +50,11 @@ export interface ZhihugenJobResult {
   label: string;
 }
 
+function safeJsonParse<T>(json: string | null | undefined): T | null {
+  if (!json) return null;
+  try { return JSON.parse(json) as T; } catch { return null; }
+}
+
 export function formatJobResponse(job: {
   id: string;
   status: string;
@@ -55,10 +62,10 @@ export function formatJobResponse(job: {
   resultJson: string | null;
   errorMessage: string | null;
 }) {
-  const req = JSON.parse(job.requestJson) as ZhihugenJobRequest;
-  const result = job.resultJson ? (JSON.parse(job.resultJson) as ZhihugenJobResult) : null;
+  const req = safeJsonParse<ZhihugenJobRequest>(job.requestJson);
+  const result = safeJsonParse<ZhihugenJobResult>(job.resultJson);
   const status = toZhihugenStatus(job.status);
-  const base = { jobId: job.id, status, label: req.label };
+  const base = { jobId: job.id, status, label: req?.label ?? "Unknown" };
 
   if (status === "completed") return { ...base, absolutePath: result?.absolutePath, cdnUrl: result?.cdnUrl };
   if (status === "failed") return { ...base, error: job.errorMessage ?? "Unknown error" };

@@ -1,6 +1,7 @@
 import { createReadStream } from "node:fs";
 import { stat, unlink } from "node:fs/promises";
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { apiError } from "../../../core/shared-kernel/api-error.js";
 import { RenderJobType } from "../../../core/shared-kernel/enums/render-job-type.js";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import type { AppContainer } from "../../../container.js";
@@ -26,32 +27,35 @@ export async function registerZhihugenJobsApis(app: FastifyInstance, container: 
   // GET /api/zhihugen/jobs/:id
   app.get<IdParam>("/api/zhihugen/jobs/:id", async (request, reply) => {
     const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
-    if (!job) return reply.code(404).send({ message: "Job not found." });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
     return formatJobResponse(job);
   });
 
-  // GET /api/zhihugen/jobs/:id/wait  — long-poll until completed/failed (max 1 hour)
+  // GET /api/zhihugen/jobs/:id/wait  — long-poll until completed/failed (max 5 min)
   app.get<IdParam>("/api/zhihugen/jobs/:id/wait", async (request: FastifyRequest<IdParam>, reply) => {
-    const deadline = Date.now() + 3_600_000;
+    const deadline = Date.now() + 5 * 60 * 1000;
     const { id } = request.params;
+    let aborted = false;
+    request.raw.on("close", () => { aborted = true; });
 
-    while (Date.now() < deadline) {
+    while (Date.now() < deadline && !aborted) {
       const job = await container.prisma.renderJob.findUnique({ where: { id } });
-      if (!job) return reply.code(404).send({ message: "Job not found." });
+      if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
       const status = toZhihugenStatus(job.status);
       if (status === "completed" || status === "failed" || status === "awaiting_upload") return formatJobResponse(job);
-      await sleep(1_000);
+      await sleep(3_000);
     }
 
-    return { error: { code: "TIMEOUT", message: "Job did not complete within 1 hour" } };
+    if (aborted) return;
+    return reply.code(408).send(apiError(408, "Request Timeout", "Job did not complete in time. Poll the job status endpoint instead."));
   });
 
   // GET /api/zhihugen/jobs/:id/preview  — stream locally rendered video for preview
   app.get<IdParam>("/api/zhihugen/jobs/:id/preview", async (request, reply) => {
     const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
-    if (!job) return reply.code(404).send({ message: "Job not found." });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
     if (job.status !== RenderJobStatus.AwaitingUpload)
-      return reply.code(409).send({ message: "Preview is only available for jobs awaiting upload." });
+      return reply.code(409).send(apiError(409, "Conflict", "Preview is only available for jobs awaiting upload."));
 
     const result = JSON.parse(job.resultJson!) as { localPath: string };
     const fileStat = await stat(result.localPath);
@@ -62,6 +66,9 @@ export async function registerZhihugenJobsApis(app: FastifyInstance, container: 
       const [startStr, endStr] = rangeHeader.replace(/bytes=/, "").split("-");
       const start = parseInt(startStr, 10);
       const end = endStr ? parseInt(endStr, 10) : fileSize - 1;
+      if (isNaN(start) || start < 0 || start >= fileSize || end < start || end >= fileSize) {
+        return reply.code(416).send(apiError(416, "Range Not Satisfiable", `Valid range: 0-${fileSize - 1}`));
+      }
       const chunkSize = end - start + 1;
       reply
         .code(206)
@@ -82,27 +89,27 @@ export async function registerZhihugenJobsApis(app: FastifyInstance, container: 
   // POST /api/zhihugen/jobs/:id/confirm-upload  — upload the previewed video to storage
   app.post<IdParam>("/api/zhihugen/jobs/:id/confirm-upload", async (request, reply) => {
     const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
-    if (!job) return reply.code(404).send({ message: "Job not found." });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
     if (job.status !== RenderJobStatus.AwaitingUpload)
-      return reply.code(409).send({ message: "Job is not awaiting upload." });
+      return reply.code(409).send(apiError(409, "Conflict", "Job is not awaiting upload."));
 
     try {
       const { absolutePath, cdnUrl } = await container.confirmUploadRenderJobUseCase.execute(request.params.id);
       return { absolutePath, cdnUrl };
     } catch (error) {
       await container.markRenderJobFailedUseCase.execute(request.params.id, error).catch(() => {});
-      return reply.code(500).send({ message: error instanceof Error ? error.message : "Upload failed." });
+      return reply.code(500).send(apiError(500, "Internal Server Error", error instanceof Error ? error.message : "Upload failed."));
     }
   });
 
   // POST /api/zhihugen/jobs/:id/cancel  — cancel a pending or awaiting-upload job
   app.post<IdParam>("/api/zhihugen/jobs/:id/cancel", async (request, reply) => {
     const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
-    if (!job) return reply.code(404).send({ message: "Job not found." });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
 
     const cancellable = [RenderJobStatus.Pending, RenderJobStatus.AwaitingUpload];
     if (!cancellable.includes(job.status as RenderJobStatus))
-      return reply.code(409).send({ message: `Cannot cancel a job with status "${job.status}".` });
+      return reply.code(409).send(apiError(409, "Conflict", `Cannot cancel a job with status "${job.status}".`));
 
     const result = job.resultJson ? (JSON.parse(job.resultJson) as { localPath?: string }) : null;
     if (result?.localPath) await unlink(result.localPath).catch(() => {});
@@ -118,9 +125,9 @@ export async function registerZhihugenJobsApis(app: FastifyInstance, container: 
   // POST /api/zhihugen/jobs/:id/discard  — discard the previewed video without uploading
   app.post<IdParam>("/api/zhihugen/jobs/:id/discard", async (request, reply) => {
     const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
-    if (!job) return reply.code(404).send({ message: "Job not found." });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
     if (job.status !== RenderJobStatus.AwaitingUpload)
-      return reply.code(409).send({ message: "Job is not awaiting upload." });
+      return reply.code(409).send(apiError(409, "Conflict", "Job is not awaiting upload."));
 
     const result = job.resultJson ? (JSON.parse(job.resultJson) as { localPath?: string }) : null;
     if (result?.localPath) await unlink(result.localPath).catch(() => {});

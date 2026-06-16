@@ -49,22 +49,20 @@ function decryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
 export class SettingsLoader {
   constructor(
     private readonly prisma: PrismaContext,
-    private readonly systemSecret: string
+    private readonly encryptionKey: string
   ) {}
 
   async load(): Promise<RuntimeSettings> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row = await (this.prisma as any).systemSettings.findFirst({ where: { id: 1 } });
+    const row = await this.prisma.systemSettings.findFirst({ where: { id: 1 } });
     if (!row) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (this.prisma as any).systemSettings.create({
-        data: { id: 1, settingsJson: JSON.stringify(encryptSecrets(defaultSettings, this.systemSecret)) }
+      await this.prisma.systemSettings.create({
+        data: { id: 1, settingsJson: JSON.stringify(encryptSecrets(defaultSettings, this.encryptionKey)) }
       });
       return { ...defaultSettings };
     }
     try {
-      const parsed = runtimeSettingsSchema.parse(JSON.parse(row.settingsJson as string));
-      return decryptSecrets(parsed, this.systemSecret);
+      const parsed = runtimeSettingsSchema.parse(JSON.parse(row.settingsJson));
+      return decryptSecrets(parsed, this.encryptionKey);
     } catch {
       return { ...defaultSettings };
     }
@@ -72,9 +70,8 @@ export class SettingsLoader {
 
   async save(settings: RuntimeSettings): Promise<void> {
     const parsed = runtimeSettingsSchema.parse(settings);
-    const toStore = encryptSecrets(parsed, this.systemSecret);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (this.prisma as any).systemSettings.upsert({
+    const toStore = encryptSecrets(parsed, this.encryptionKey);
+    await this.prisma.systemSettings.upsert({
       where: { id: 1 },
       create: { id: 1, settingsJson: JSON.stringify(toStore) },
       update: { settingsJson: JSON.stringify(toStore) }

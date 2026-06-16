@@ -19,6 +19,8 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [storageTokenDirty, setStorageTokenDirty] = useState(false);
+  const [ttsKeyDirty, setTtsKeyDirty] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -26,7 +28,11 @@ export function SettingsPage() {
       settingsClient.getTts(),
       settingsClient.getZhihugen(),
     ])
-      .then(([s, t, z]) => { setStorage(s); setTts(t); setZhihugen(z); })
+      .then(([s, t, z]) => {
+        setStorage({ baseUrl: s.baseUrl, accessToken: "" });
+        setTts({ baseUrl: t.baseUrl, apiKey: "" });
+        setZhihugen(z);
+      })
       .catch(() => setError("Failed to load settings."))
       .finally(() => setLoading(false));
   }, []);
@@ -36,14 +42,21 @@ export function SettingsPage() {
     setSaved(false);
     setSaving(true);
     try {
+      const storagePayload: Partial<StorageSettings> = { baseUrl: storage.baseUrl };
+      if (storageTokenDirty) storagePayload.accessToken = storage.accessToken;
+      const ttsPayload: Partial<TtsSettings> = { baseUrl: tts.baseUrl };
+      if (ttsKeyDirty) ttsPayload.apiKey = tts.apiKey;
+
       const [s, t, z] = await Promise.all([
-        settingsClient.updateStorage(storage),
-        settingsClient.updateTts(tts),
+        settingsClient.updateStorage(storagePayload),
+        settingsClient.updateTts(ttsPayload),
         settingsClient.updateZhihugen(zhihugen),
       ]);
-      setStorage(s);
-      setTts(t);
+      setStorage({ baseUrl: s.baseUrl, accessToken: "" });
+      setTts({ baseUrl: t.baseUrl, apiKey: "" });
       setZhihugen(z);
+      setStorageTokenDirty(false);
+      setTtsKeyDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
@@ -59,7 +72,7 @@ export function SettingsPage() {
         <h1 className="page-title">Settings</h1>
       </div>
 
-      {loading && <div className="settings-loading"><Loader size={14} className="spin" /> Loading…</div>}
+      {loading && <div className="settings-loading"><Loader size={14} className="spin" /> Loading...</div>}
       {error && <div className="settings-error">{error}</div>}
 
       {!loading && (
@@ -81,8 +94,8 @@ export function SettingsPage() {
             <input
               type="password"
               value={storage.accessToken}
-              placeholder="••••••••"
-              onChange={(e) => setStorage((s) => ({ ...s, accessToken: e.target.value }))}
+              placeholder="********  (leave blank to keep current)"
+              onChange={(e) => { setStorageTokenDirty(true); setStorage((s) => ({ ...s, accessToken: e.target.value })); }}
             />
           </div>
 
@@ -103,8 +116,8 @@ export function SettingsPage() {
             <input
               type="password"
               value={tts.apiKey}
-              placeholder="••••••••"
-              onChange={(e) => setTts((t) => ({ ...t, apiKey: e.target.value }))}
+              placeholder="********  (leave blank to keep current)"
+              onChange={(e) => { setTtsKeyDirty(true); setTts((t) => ({ ...t, apiKey: e.target.value })); }}
             />
           </div>
 
@@ -142,7 +155,7 @@ export function SettingsPage() {
 
           <div className="actions">
             <button className="btn btn-primary" onClick={save} disabled={saving}>
-              {saving ? <><Loader size={13} className="spin" /> Saving…</> : <><Save size={13} /> Save</>}
+              {saving ? <><Loader size={13} className="spin" /> Saving...</> : <><Save size={13} /> Save</>}
             </button>
             {saved && <span className="status-msg">Saved.</span>}
           </div>

@@ -5,7 +5,6 @@
     "dev": "pnpm --parallel --filter app --filter ui dev",
     "dev:app": "pnpm --filter app dev",
     "dev:ui": "pnpm --filter ui dev",
-    "dev:worker": "pnpm --filter app worker:dev",
     "db:migrate": "pnpm --filter app db:migrate"
   }
 }

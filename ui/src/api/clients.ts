@@ -1,15 +1,15 @@
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
 export interface StorageSettings {
   baseUrl: string;
   accessToken: string;
+  hasAccessToken?: boolean;
 }
 
 export interface TtsSettings {
   baseUrl: string;
   apiKey: string;
+  hasApiKey?: boolean;
 }
 
 export type ZhihugenRenderResponseDto =
@@ -41,45 +41,83 @@ export interface ZhihugenSettings {
   defaultTtsModel: string;
 }
 
-// ── Fetch helper ─────────────────────────────────────────────────────────────
+interface LoginResponse {
+  accessToken: string;
+  tokenType: "Bearer";
+}
+
+interface ApiError {
+  statusCode: number;
+  error: string;
+  message: string;
+}
+
+const authTokenKey = "vgen.adminToken";
+
+export function getAuthToken(): string {
+  return localStorage.getItem(authTokenKey) ?? "";
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem(authTokenKey, token);
+}
+
+export function clearAuthToken(): void {
+  localStorage.removeItem(authTokenKey);
+}
+
+function withAuthHeaders(options?: RequestInit): RequestInit {
+  const token = getAuthToken();
+  const headers = new Headers(options?.headers);
+  if (token) headers.set("authorization", `Bearer ${token}`);
+  return { ...options, headers };
+}
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiBaseUrl}${path}`, options);
-  if (!res.ok) throw new Error(`${options?.method ?? "GET"} ${path} → ${res.status}`);
+  const res = await fetch(`${apiBaseUrl}${path}`, withAuthHeaders(options));
+  if (!res.ok) {
+    let errorMessage = `${options?.method ?? "GET"} ${path} failed with ${res.status}`;
+    try {
+      const body = (await res.json()) as Partial<ApiError>;
+      if (body.message) errorMessage = body.message;
+    } catch {
+      // Ignore non-JSON error bodies.
+    }
+    throw new Error(errorMessage);
+  }
   return res.json() as Promise<T>;
 }
 
-// ── Clients ──────────────────────────────────────────────────────────────────
+async function apiBlob(path: string): Promise<Blob> {
+  const res = await fetch(`${apiBaseUrl}${path}`, withAuthHeaders());
+  if (!res.ok) throw new Error(`GET ${path} failed with ${res.status}`);
+  return res.blob();
+}
+
+export const authClient = {
+  login: (systemSecret: string) =>
+    apiFetch<LoginResponse>("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ systemSecret })
+    })
+};
 
 export const zhihugenClient = {
-  // Render
   render: (form: FormData) =>
     apiFetch<ZhihugenRenderResponseDto>("/api/zhihugen/render", {
       method: "POST",
       body: form
     }),
 
-  // Jobs
   listJobs: () => apiFetch<ZhihugenJobDto[]>("/api/zhihugen/jobs"),
   getJob: (id: string) => apiFetch<ZhihugenJobDto>(`/api/zhihugen/jobs/${encodeURIComponent(id)}`),
-
-  // Preview workflow
-  previewUrl: (id: string) => `${apiBaseUrl}/api/zhihugen/jobs/${encodeURIComponent(id)}/preview`,
+  previewBlob: (id: string) => apiBlob(`/api/zhihugen/jobs/${encodeURIComponent(id)}/preview`),
   confirmUpload: (id: string) =>
     apiFetch<{ absolutePath: string; cdnUrl?: string }>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/confirm-upload`, { method: "POST" }),
   discardJob: (id: string) =>
     apiFetch<{ status: string }>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/discard`, { method: "POST" }),
 
-  // Settings
-  getSettings: () => apiFetch<ZhihugenSettings>("/api/features/zhihugen/settings"),
-  updateSettings: (s: Partial<ZhihugenSettings>) =>
-    apiFetch<ZhihugenSettings>("/api/features/zhihugen/settings", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(s)
-    }),
-
-  // TTS models
   listTtsModels: () => apiFetch<{ models: TtsModel[]; defaultModelId: string }>("/api/tts/models"),
 };
 

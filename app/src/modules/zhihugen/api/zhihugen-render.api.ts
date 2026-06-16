@@ -97,7 +97,8 @@ export async function registerZhihugenRenderApis(app: FastifyInstance, container
       fps: store.settings.defaultFps,
       imageFit: store.settings.defaultImageFit,
       sceneCount: imagePaths.length,
-      previewBeforeUpload
+      previewBeforeUpload,
+      telegramCaptionTemplate: container.settings.telegram.captionTemplate
     };
 
     return createAndRender(container, req, reply);

@@ -6,13 +6,15 @@ import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-st
 import type { PrismaContext } from "../../../core/database/prisma-context.js";
 import type { RenderEngine } from "../../../core/shared-kernel/contracts/render-engine.js";
 import type { StorageClient } from "../../../core/shared-kernel/contracts/storage-client.js";
+import type { VideoDeliveryClient, VideoDeliveryResult } from "../../../core/shared-kernel/contracts/video-delivery-client.js";
 import type { ZhihugenJobRequest } from "../../zhihugen/store/job-helpers.js";
 
 export class ExecuteRenderJobUseCase {
   constructor(
     private readonly prisma: PrismaContext,
     private readonly renderEngine: RenderEngine,
-    private readonly storage: StorageClient
+    private readonly storage: StorageClient,
+    private readonly videoDelivery: VideoDeliveryClient
   ) {}
 
   async execute(renderJobId: string): Promise<{ absolutePath: string } | { awaitingUpload: true }> {
@@ -53,7 +55,7 @@ export class ExecuteRenderJobUseCase {
         where: { id: renderJobId },
         data: {
           status: RenderJobStatus.AwaitingUpload,
-          resultJson: JSON.stringify({ localPath: output.localPath, destinationPath, label: req.label })
+          resultJson: JSON.stringify({ localPath: output.localPath, destinationPath, label: req.label, telegramCaptionTemplate: req.telegramCaptionTemplate })
         }
       });
       return { awaitingUpload: true };
@@ -65,17 +67,51 @@ export class ExecuteRenderJobUseCase {
       contentType: "video/mp4"
     });
 
+    const telegram = await this.deliverToTelegram(output.localPath, req.outputFilename, req, absolutePath, cdnUrl);
+
     await unlink(output.localPath).catch(() => {});
 
     await this.prisma.renderJob.update({
       where: { id: renderJobId },
       data: {
         status: RenderJobStatus.Completed,
-        resultJson: JSON.stringify({ absolutePath, cdnUrl, label: req.label }),
+        resultJson: JSON.stringify({ absolutePath, cdnUrl, label: req.label, telegram }),
         completedAt: new Date()
       }
     });
 
     return { absolutePath };
+  }
+
+  private async deliverToTelegram(
+    localPath: string,
+    filename: string,
+    req: ZhihugenJobRequest,
+    absolutePath: string,
+    cdnUrl?: string
+  ): Promise<VideoDeliveryResult | { provider: "telegram"; status: "failed"; error: string; failedAt: string } | null> {
+    try {
+      return await this.videoDelivery.deliverVideo({
+        localPath,
+        filename,
+        caption: this.renderCaption(req.telegramCaptionTemplate, {
+          label: req.label,
+          absolutePath,
+          cdnUrl: cdnUrl ?? ""
+        })
+      });
+    } catch (error) {
+      return {
+        provider: "telegram",
+        status: "failed",
+        error: error instanceof Error ? error.message : "Telegram delivery failed.",
+        failedAt: new Date().toISOString()
+      };
+    }
+  }
+
+  private renderCaption(template: string | undefined, values: Record<string, string>): string {
+    const source = template?.trim() || "{label}\n\n{cdnUrl}";
+    return source.replace(/\{(label|absolutePath|cdnUrl)\}/g, (_match, key: string) => values[key] ?? "");
   }
 }

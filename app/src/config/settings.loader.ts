@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import type { PrismaContext } from "../core/database/prisma-context.js";
-import { runtimeSettingsSchema, defaultSettings, type RuntimeSettings } from "./settings.schema.js";
+import { runtimeSettingsSchema, defaultSettings, defaultTelegramSettings, type RuntimeSettings } from "./settings.schema.js";
 
 const ALGO = "aes-256-gcm";
 const PREFIX = "enc:";
@@ -33,6 +33,7 @@ function encryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
     ...s,
     storage: { ...s.storage, accessToken: encrypt(s.storage.accessToken, secret) },
     tts: { ...s.tts, apiKey: encrypt(s.tts.apiKey, secret) },
+    telegram: { ...(s.telegram ?? defaultTelegramSettings), botToken: encrypt((s.telegram ?? defaultTelegramSettings).botToken, secret) },
     mediaSource: { ...s.mediaSource, accessToken: encrypt(s.mediaSource.accessToken, secret) }
   };
 }
@@ -42,6 +43,7 @@ function decryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
     ...s,
     storage: { ...s.storage, accessToken: decrypt(s.storage.accessToken, secret) },
     tts: { ...s.tts, apiKey: decrypt(s.tts.apiKey, secret) },
+    telegram: { ...(s.telegram ?? defaultTelegramSettings), botToken: decrypt((s.telegram ?? defaultTelegramSettings).botToken, secret) },
     mediaSource: { ...s.mediaSource, accessToken: decrypt(s.mediaSource.accessToken, secret) }
   };
 }

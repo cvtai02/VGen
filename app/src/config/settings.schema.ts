@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const defaultTelegramSettings = {
+  enabled: false,
+  botToken: "",
+  chatId: "",
+  captionTemplate: "{label}\n\n{cdnUrl}"
+};
+
 export const runtimeSettingsSchema = z.object({
   app: z.object({
     baseUrl: z.string().url(),
@@ -22,6 +29,12 @@ export const runtimeSettingsSchema = z.object({
     baseUrl: z.string(),
     apiKey: z.string()
   }),
+  telegram: z.object({
+    enabled: z.boolean(),
+    botToken: z.string(),
+    chatId: z.string(),
+    captionTemplate: z.string()
+  }).default(defaultTelegramSettings),
   mediaSource: z.object({
     provider: z.enum(["mock", "internal-api"]),
     internalApiBaseUrl: z.string(),
@@ -60,6 +73,7 @@ export const defaultSettings: RuntimeSettings = {
     baseUrl: "",
     apiKey: ""
   },
+  telegram: { ...defaultTelegramSettings },
   mediaSource: {
     provider: "mock",
     internalApiBaseUrl: "",

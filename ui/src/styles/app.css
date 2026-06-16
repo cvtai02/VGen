@@ -494,6 +494,23 @@ pre {
   margin-bottom: 16px;
 }
 
+.settings-toggle {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.settings-toggle input {
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  height: 16px;
+  width: 16px;
+}
+
 .page-subtitle {
   color: var(--text-secondary);
   font-size: 13px;

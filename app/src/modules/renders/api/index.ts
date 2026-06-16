@@ -5,6 +5,7 @@ import { registerGetRenderJobApi } from "./get-render-job.api.js";
 import { registerListRenderJobsApi } from "./list-render-jobs.api.js";
 import { registerRenderHealthApi } from "./render-health.api.js";
 import { registerStorageSettingsApi } from "./storage-settings.api.js";
+import { registerTelegramSettingsApi } from "./telegram-settings.api.js";
 import { registerTtsSettingsApi } from "./tts-settings.api.js";
 
 export async function registerRenderApis(app: FastifyInstance, container: AppContainer): Promise<void> {
@@ -13,5 +14,6 @@ export async function registerRenderApis(app: FastifyInstance, container: AppCon
   await registerGetRenderJobApi(app, container);
   await registerListRenderJobsApi(app, container);
   await registerStorageSettingsApi(app, container);
+  await registerTelegramSettingsApi(app, container);
   await registerTtsSettingsApi(app, container);
 }

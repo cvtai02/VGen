@@ -41,6 +41,7 @@ export interface ZhihugenJobRequest {
   sceneCount: number;
   previewBeforeUpload?: boolean;
   backgroundVideoLocalPath?: string;
+  telegramCaptionTemplate?: string;
 }
 
 export interface ZhihugenJobResult {
@@ -48,6 +49,17 @@ export interface ZhihugenJobResult {
   cdnUrl?: string;
   localPath?: string;
   label: string;
+  telegram?: {
+    provider: "telegram";
+    status: "sent" | "failed";
+    chatId?: string;
+    messageId?: number;
+    fileId?: string;
+    link?: string;
+    sentAt?: string;
+    error?: string;
+    failedAt?: string;
+  } | null;
 }
 
 function safeJsonParse<T>(json: string | null | undefined): T | null {
@@ -67,7 +79,7 @@ export function formatJobResponse(job: {
   const status = toZhihugenStatus(job.status);
   const base = { jobId: job.id, status, label: req?.label ?? "Unknown" };
 
-  if (status === "completed") return { ...base, absolutePath: result?.absolutePath, cdnUrl: result?.cdnUrl };
+  if (status === "completed") return { ...base, absolutePath: result?.absolutePath, cdnUrl: result?.cdnUrl, telegram: result?.telegram };
   if (status === "failed") return { ...base, error: job.errorMessage ?? "Unknown error" };
   return base;
 }

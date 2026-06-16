@@ -12,6 +12,14 @@ export interface TtsSettings {
   hasApiKey?: boolean;
 }
 
+export interface TelegramSettings {
+  enabled: boolean;
+  botToken: string;
+  hasBotToken?: boolean;
+  chatId: string;
+  captionTemplate: string;
+}
+
 export interface StorageAccessDirectory {
   path: string;
   access: string;
@@ -44,6 +52,17 @@ export interface ZhihugenJobDto {
   label?: string;
   absolutePath?: string;
   cdnUrl?: string;
+  telegram?: {
+    provider: "telegram";
+    status: "sent" | "failed";
+    chatId?: string;
+    messageId?: number;
+    fileId?: string;
+    link?: string;
+    sentAt?: string;
+    error?: string;
+    failedAt?: string;
+  } | null;
   error?: string;
 }
 
@@ -166,6 +185,14 @@ export const settingsClient = {
   getTts: () => apiFetch<TtsSettings>("/api/settings/tts"),
   updateTts: (body: Partial<TtsSettings>) =>
     apiFetch<TtsSettings>("/api/settings/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+
+  getTelegram: () => apiFetch<TelegramSettings>("/api/settings/telegram"),
+  updateTelegram: (body: Partial<TelegramSettings>) =>
+    apiFetch<TelegramSettings>("/api/settings/telegram", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)

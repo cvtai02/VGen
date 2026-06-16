@@ -34,6 +34,8 @@ All other runtime settings are stored in the `SystemSettings` table and loaded a
 | POST | `/api/settings/storage` | Update storage settings |
 | GET | `/api/settings/tts` | Get TTS settings with masked secrets |
 | POST | `/api/settings/tts` | Update TTS settings |
+| GET | `/api/settings/telegram` | Get Telegram delivery settings with masked bot token |
+| POST | `/api/settings/telegram` | Update Telegram delivery settings |
 | GET | `/api/features/zhihugen/settings` | Get Zhihugen runtime settings |
 | POST | `/api/features/zhihugen/settings` | Update Zhihugen runtime settings |
 | GET | `/api/tts/models` | List TTS models |

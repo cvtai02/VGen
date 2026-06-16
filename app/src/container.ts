@@ -4,6 +4,7 @@ import type { RuntimeSettings } from "./config/settings.schema.js";
 import { prismaClient } from "./core/database/prisma-client.js";
 import type { IdGenerator } from "./core/shared-kernel/contracts/id-generator.js";
 import { ConcurrencyLimiter } from "./infrastructure/concurrency/concurrency-limiter.js";
+import { TelegramVideoDeliveryClient } from "./infrastructure/delivery/telegram/telegram-video-delivery-client.js";
 import { ZhihugenRenderEngine } from "./infrastructure/render-engine/zhihugen/zhihugen-render-engine.js";
 import { SevenRouterStorageClient } from "./infrastructure/storage/7router/7router-storage-client.js";
 import { ZhihugenStore } from "./modules/zhihugen/store/zhihugen-store.js";
@@ -40,6 +41,7 @@ export async function createContainer(): Promise<AppContainer> {
   const idGenerator: IdGenerator = { createId: () => randomUUID() };
   const renderEngine = new ZhihugenRenderEngine(() => settings.tts);
   const storage = new SevenRouterStorageClient(() => settings.storage);
+  const videoDelivery = new TelegramVideoDeliveryClient(() => settings.telegram);
   const issuedAdminTokens = new Set<string>();
 
   return {
@@ -51,8 +53,8 @@ export async function createContainer(): Promise<AppContainer> {
     idGenerator,
     createAdminAccessTokenUseCase: new CreateAdminAccessTokenUseCase(systemSecret, issuedAdminTokens),
     verifyAdminAccessTokenUseCase: new VerifyAdminAccessTokenUseCase(issuedAdminTokens),
-    executeRenderJobUseCase: new ExecuteRenderJobUseCase(prismaClient, renderEngine, storage),
-    confirmUploadRenderJobUseCase: new ConfirmUploadRenderJobUseCase(prismaClient, storage),
+    executeRenderJobUseCase: new ExecuteRenderJobUseCase(prismaClient, renderEngine, storage, videoDelivery),
+    confirmUploadRenderJobUseCase: new ConfirmUploadRenderJobUseCase(prismaClient, storage, videoDelivery),
     markRenderJobFailedUseCase: new MarkRenderJobFailedUseCase(prismaClient)
   };
 }

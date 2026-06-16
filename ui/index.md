@@ -7,6 +7,7 @@ Vite React admin interface for VGen.
 - Log in with the app `SYSTEM_SECRET`.
 - Store the issued bearer token in local storage.
 - Configure DB-backed runtime settings through protected app APIs.
+- Browse 7router storage directories and files.
 - Create Zhihugen render jobs.
 - Review and manage render job status.
 

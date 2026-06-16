@@ -6,6 +6,11 @@ export class SevenRouterStorageClient implements StorageClient {
     private readonly getSettings: () => { baseUrl: string; accessToken: string }
   ) {}
 
+  private normalizeBaseUrl(baseUrl: string): string {
+    const trimmed = baseUrl.trim().replace(/\/+$/, "");
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  }
+
   async upload(input: StorageUploadInput): Promise<StorageUploadResult> {
     const { baseUrl, accessToken } = this.getSettings();
     const absolutePath = input.destinationPath;
@@ -13,7 +18,7 @@ export class SevenRouterStorageClient implements StorageClient {
     const fileContent = await readFile(input.localPath);
     const contentBase64 = fileContent.toString("base64");
 
-    const uploadResponse = await fetch(`${baseUrl}/files/upload`, {
+    const uploadResponse = await fetch(`${this.normalizeBaseUrl(baseUrl)}/files/upload`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -35,7 +40,7 @@ export class SevenRouterStorageClient implements StorageClient {
   async download(absolutePath: string, destLocalPath: string): Promise<void> {
     const { baseUrl, accessToken } = this.getSettings();
 
-    const res = await fetch(`${baseUrl}/files/get`, {
+    const res = await fetch(`${this.normalizeBaseUrl(baseUrl)}/files/get`, {
       method: "POST",
       headers: {
         "content-type": "application/json",

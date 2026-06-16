@@ -12,6 +12,28 @@ export interface TtsSettings {
   hasApiKey?: boolean;
 }
 
+export interface StorageAccessDirectory {
+  path: string;
+  access: string;
+}
+
+export interface StorageAccessResponse {
+  isAdmin: boolean;
+  directories: StorageAccessDirectory[];
+}
+
+export interface StorageBrowseItem {
+  name: string;
+  absolutePath: string;
+  type: "file" | "folder" | string;
+  sizeBytes?: number;
+  cdnUrl?: string;
+}
+
+export interface StorageBrowseResponse {
+  items: StorageBrowseItem[];
+}
+
 export type ZhihugenRenderResponseDto =
   | { absolutePath: string }
   | { jobId: string; status: "awaiting_upload" };
@@ -156,4 +178,9 @@ export const settingsClient = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
     }),
+};
+
+export const storageClient = {
+  listDirectories: () => apiFetch<StorageAccessResponse>("/api/storage/directories"),
+  browse: (path: string) => apiFetch<StorageBrowseResponse>(`/api/storage/browse?path=${encodeURIComponent(path)}`),
 };

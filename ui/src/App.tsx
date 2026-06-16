@@ -1,11 +1,12 @@
-import { KeyRound, ListVideo, Loader, LogOut, Video, Layers, Settings } from "lucide-react";
+import { Database, KeyRound, ListVideo, Loader, LogOut, Video, Layers, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { authClient, authExpiredEventName, clearAuthToken, getAuthToken, setAuthToken } from "./api/clients.js";
 import { CreateZhihugenRenderPage } from "./pages/CreateZhihugenRenderPage.js";
 import { RenderJobsPage } from "./pages/RenderJobsPage.js";
+import { SevenRouterPage } from "./pages/SevenRouterPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 
-type Page = "zhihugen" | "jobs" | "settings";
+type Page = "zhihugen" | "jobs" | "settings" | "7router";
 
 export function App() {
   const [page, setPage] = useState<Page>("jobs");
@@ -87,6 +88,9 @@ export function App() {
           <button className={page === "zhihugen" ? "active" : ""} onClick={() => setPage("zhihugen")}>
             <Layers size={16} className="nav-icon" /><span className="nav-label">Zhihugen</span>
           </button>
+          <button className={page === "7router" ? "active" : ""} onClick={() => setPage("7router")}>
+            <Database size={16} className="nav-icon" /><span className="nav-label">7router</span>
+          </button>
           <button className={page === "settings" ? "active" : ""} onClick={() => setPage("settings")}>
             <Settings size={16} className="nav-icon" /><span className="nav-label">Settings</span>
           </button>
@@ -97,6 +101,7 @@ export function App() {
       </nav>
       {page === "jobs" && <RenderJobsPage />}
       {page === "zhihugen" && <CreateZhihugenRenderPage />}
+      {page === "7router" && <SevenRouterPage />}
       {page === "settings" && <SettingsPage />}
     </main>
   );

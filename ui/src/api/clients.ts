@@ -53,6 +53,7 @@ interface ApiError {
 }
 
 const authTokenKey = "vgen.adminToken";
+export const authExpiredEventName = "vgen:auth-expired";
 
 export function getAuthToken(): string {
   return localStorage.getItem(authTokenKey) ?? "";
@@ -76,6 +77,10 @@ function withAuthHeaders(options?: RequestInit): RequestInit {
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBaseUrl}${path}`, withAuthHeaders(options));
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAuthToken();
+      window.dispatchEvent(new Event(authExpiredEventName));
+    }
     let errorMessage = `${options?.method ?? "GET"} ${path} failed with ${res.status}`;
     try {
       const body = (await res.json()) as Partial<ApiError>;
@@ -90,7 +95,13 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 async function apiBlob(path: string): Promise<Blob> {
   const res = await fetch(`${apiBaseUrl}${path}`, withAuthHeaders());
-  if (!res.ok) throw new Error(`GET ${path} failed with ${res.status}`);
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuthToken();
+      window.dispatchEvent(new Event(authExpiredEventName));
+    }
+    throw new Error(`GET ${path} failed with ${res.status}`);
+  }
   return res.blob();
 }
 

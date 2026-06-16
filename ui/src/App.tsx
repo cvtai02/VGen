@@ -1,6 +1,6 @@
 import { KeyRound, ListVideo, Loader, LogOut, Video, Layers, Settings } from "lucide-react";
-import { useState } from "react";
-import { authClient, clearAuthToken, getAuthToken, setAuthToken } from "./api/clients.js";
+import { useEffect, useState } from "react";
+import { authClient, authExpiredEventName, clearAuthToken, getAuthToken, setAuthToken } from "./api/clients.js";
 import { CreateZhihugenRenderPage } from "./pages/CreateZhihugenRenderPage.js";
 import { RenderJobsPage } from "./pages/RenderJobsPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
@@ -13,6 +13,17 @@ export function App() {
   const [systemSecret, setSystemSecret] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState("");
+
+  useEffect(() => {
+    function handleAuthExpired() {
+      setToken("");
+      setPage("jobs");
+      setLoginError("Session expired. Sign in again.");
+    }
+
+    window.addEventListener(authExpiredEventName, handleAuthExpired);
+    return () => window.removeEventListener(authExpiredEventName, handleAuthExpired);
+  }, []);
 
   async function login() {
     setLoginError("");

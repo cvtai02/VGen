@@ -10,13 +10,11 @@ Content-Type: multipart/form-data
 
 images=<file>            repeat for every scene image
 scripts=<text>           repeat to match image order
-label=<video label>
-previewBeforeUpload=true`;
+label=<video label>`;
 
 const curlCode = `curl -X POST "${apiBaseUrl}/api/zhihugen/render" \\
   -H "Authorization: Bearer <system-token>" \\
   -F "label=episode-001" \\
-  -F "previewBeforeUpload=true" \\
   -F "images=@scene-1.png" \\
   -F "scripts=First narration line" \\
   -F "images=@scene-2.png" \\
@@ -25,12 +23,6 @@ const curlCode = `curl -X POST "${apiBaseUrl}/api/zhihugen/render" \\
 const responseCode = `Response 200
 {
   "absolutePath": "CloudflareR2/.../video.mp4"
-}
-
-Response 202 when previewBeforeUpload=true
-{
-  "jobId": "zhihugen_...",
-  "status": "awaiting_upload"
 }`;
 
 const jobCode = `GET  ${apiBaseUrl}/api/zhihugen/jobs
@@ -85,7 +77,7 @@ export function UsecasesPage() {
 
             <div className="usecase-step">
               <div className="usecase-step-title"><Code2 size={15} /> Render response</div>
-              <p>Without preview mode the API uploads immediately. With preview mode it stores a local preview and returns a job id.</p>
+              <p>External render requests upload immediately when generation completes.</p>
               <pre>{responseCode}</pre>
             </div>
 

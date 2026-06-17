@@ -6,7 +6,7 @@ import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-st
 import type { PrismaContext } from "../../../core/database/prisma-context.js";
 import type { RenderEngine } from "../../../core/shared-kernel/contracts/render-engine.js";
 import type { StorageClient } from "../../../core/shared-kernel/contracts/storage-client.js";
-import type { VideoDeliveryClient, VideoDeliveryResult } from "../../../core/shared-kernel/contracts/video-delivery-client.js";
+import type { VideoDeliveryClient, VideoDeliveryFailure, VideoDeliveryOutcome } from "../../../core/shared-kernel/contracts/video-delivery-client.js";
 import type { ZhihugenJobRequest } from "../../zhihugen/store/job-helpers.js";
 
 export class ExecuteRenderJobUseCase {
@@ -89,7 +89,7 @@ export class ExecuteRenderJobUseCase {
     req: ZhihugenJobRequest,
     absolutePath: string,
     cdnUrl?: string
-  ): Promise<VideoDeliveryResult | { provider: "telegram"; status: "failed"; error: string; failedAt: string } | null> {
+  ): Promise<VideoDeliveryOutcome[] | null> {
     try {
       return await this.videoDelivery.deliverVideo({
         localPath,
@@ -101,13 +101,19 @@ export class ExecuteRenderJobUseCase {
         })
       });
     } catch (error) {
-      return {
-        provider: "telegram",
-        status: "failed",
-        error: error instanceof Error ? error.message : "Telegram delivery failed.",
-        failedAt: new Date().toISOString()
-      };
+      return [
+        this.toTelegramFailure(error)
+      ];
     }
+  }
+
+  private toTelegramFailure(error: unknown): VideoDeliveryFailure {
+    return {
+      provider: "telegram",
+      status: "failed",
+      error: error instanceof Error ? error.message : "Telegram delivery failed.",
+      failedAt: new Date().toISOString()
+    };
   }
 
   private renderCaption(template: string | undefined, values: Record<string, string>): string {

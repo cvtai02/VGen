@@ -7,6 +7,10 @@ export interface VideoDeliveryInput {
 export interface VideoDeliveryResult {
   provider: "telegram";
   status: "sent";
+  botId?: string;
+  botName?: string;
+  destinationId?: string;
+  destinationName?: string;
   chatId: string;
   messageId: number;
   fileId?: string;
@@ -14,6 +18,20 @@ export interface VideoDeliveryResult {
   sentAt: string;
 }
 
+export interface VideoDeliveryFailure {
+  provider: "telegram";
+  status: "failed";
+  botId?: string;
+  botName?: string;
+  destinationId?: string;
+  destinationName?: string;
+  chatId?: string;
+  error: string;
+  failedAt: string;
+}
+
+export type VideoDeliveryOutcome = VideoDeliveryResult | VideoDeliveryFailure;
+
 export interface VideoDeliveryClient {
-  deliverVideo(input: VideoDeliveryInput): Promise<VideoDeliveryResult | null>;
+  deliverVideo(input: VideoDeliveryInput): Promise<VideoDeliveryOutcome[] | null>;
 }

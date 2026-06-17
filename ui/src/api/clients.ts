@@ -14,10 +14,27 @@ export interface TtsSettings {
 
 export interface TelegramSettings {
   enabled: boolean;
-  botToken: string;
-  hasBotToken?: boolean;
-  chatId: string;
   captionTemplate: string;
+  bots: TelegramBot[];
+}
+
+export interface TelegramDestination {
+  id: string;
+  chatId: string;
+  name: string;
+  type?: string;
+  username?: string;
+  enabled: boolean;
+}
+
+export interface TelegramBot {
+  id: string;
+  name: string;
+  username?: string;
+  botToken: string;
+  hasBotToken: boolean;
+  enabled: boolean;
+  destinations: TelegramDestination[];
 }
 
 export interface StorageAccessDirectory {
@@ -52,9 +69,13 @@ export interface ZhihugenJobDto {
   label?: string;
   absolutePath?: string;
   cdnUrl?: string;
-  telegram?: {
+  telegram?: Array<{
     provider: "telegram";
     status: "sent" | "failed";
+    botId?: string;
+    botName?: string;
+    destinationId?: string;
+    destinationName?: string;
     chatId?: string;
     messageId?: number;
     fileId?: string;
@@ -62,7 +83,7 @@ export interface ZhihugenJobDto {
     sentAt?: string;
     error?: string;
     failedAt?: string;
-  } | null;
+  }> | null;
   error?: string;
 }
 
@@ -205,6 +226,42 @@ export const settingsClient = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
     }),
+};
+
+export const telegramClient = {
+  addBot: (body: { name?: string; botToken: string; chatId?: string; chatName?: string }) =>
+    apiFetch<TelegramBot>("/api/telegram/bots", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+  updateBot: (botId: string, body: { name?: string; botToken?: string; enabled?: boolean }) =>
+    apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+  deleteBot: (botId: string) =>
+    apiFetch<{ status: string }>(`/api/telegram/bots/${encodeURIComponent(botId)}`, { method: "DELETE" }),
+  syncBot: (botId: string) =>
+    apiFetch<{ created: number; updated: number; discovered: number; warning?: string; bot: TelegramBot }>(
+      `/api/telegram/bots/${encodeURIComponent(botId)}/sync`,
+      { method: "POST" }
+    ),
+  addDestination: (botId: string, body: { chatId: string; name?: string }) =>
+    apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}/destinations`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+  updateDestination: (botId: string, destinationId: string, body: { name?: string; enabled?: boolean }) =>
+    apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}/destinations/${encodeURIComponent(destinationId)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+  deleteDestination: (botId: string, destinationId: string) =>
+    apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}/destinations/${encodeURIComponent(destinationId)}`, { method: "DELETE" }),
 };
 
 export const storageClient = {

@@ -144,25 +144,28 @@ function JobDetail({
               </div>
             </div>
           )}
-          {job.telegram && (
+          {job.telegram && job.telegram.length > 0 && (
             <div className="job-result" style={{ marginTop: 12 }}>
               <div className="form-section-label">Telegram</div>
-              {job.telegram.status === "sent" ? (
-                <div className="job-result-detail">
-                  <div className="job-result-path">
-                    Sent to {job.telegram.chatId} as message {job.telegram.messageId}
+              <div className="job-result-detail">
+                {job.telegram.map((telegram, index) => (
+                  <div key={`${telegram.destinationId ?? telegram.chatId ?? index}-${index}`} className="job-result-row">
+                    <span className={telegram.status === "sent" ? "badge badge-completed" : "badge badge-failed"}>
+                      {telegram.status}
+                    </span>
+                    <span className="job-result-path">
+                      {telegram.destinationName ?? telegram.chatId ?? "Telegram"}
+                      {telegram.status === "sent" && telegram.messageId ? ` as message ${telegram.messageId}` : ""}
+                      {telegram.status === "failed" && telegram.error ? `: ${telegram.error}` : ""}
+                    </span>
+                    {telegram.link && (
+                      <a className="router-open-link" href={telegram.link} target="_blank" rel="noopener noreferrer">
+                        Open
+                      </a>
+                    )}
                   </div>
-                  {job.telegram.link && (
-                    <a className="router-open-link" href={job.telegram.link} target="_blank" rel="noopener noreferrer">
-                      Open Telegram message
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <div className="settings-error" style={{ marginBottom: 0 }}>
-                  {job.telegram.error ?? "Telegram delivery failed."}
-                </div>
-              )}
+                ))}
+              </div>
             </div>
           )}
         </>
@@ -233,7 +236,7 @@ export function RenderJobsPage() {
                 : "—"}
             </span>
             <span className="job-output">
-              {job.telegram?.status === "sent" ? "Telegram" : ""}
+              {job.telegram?.some((item) => item.status === "sent") ? "Telegram" : ""}
             </span>
           </div>
         ))}

@@ -33,7 +33,13 @@ function encryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
     ...s,
     storage: { ...s.storage, accessToken: encrypt(s.storage.accessToken, secret) },
     tts: { ...s.tts, apiKey: encrypt(s.tts.apiKey, secret) },
-    telegram: { ...(s.telegram ?? defaultTelegramSettings), botToken: encrypt((s.telegram ?? defaultTelegramSettings).botToken, secret) },
+    telegram: {
+      ...(s.telegram ?? defaultTelegramSettings),
+      bots: (s.telegram ?? defaultTelegramSettings).bots.map((bot) => ({
+        ...bot,
+        botToken: encrypt(bot.botToken, secret)
+      }))
+    },
     mediaSource: { ...s.mediaSource, accessToken: encrypt(s.mediaSource.accessToken, secret) }
   };
 }
@@ -43,7 +49,13 @@ function decryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
     ...s,
     storage: { ...s.storage, accessToken: decrypt(s.storage.accessToken, secret) },
     tts: { ...s.tts, apiKey: decrypt(s.tts.apiKey, secret) },
-    telegram: { ...(s.telegram ?? defaultTelegramSettings), botToken: decrypt((s.telegram ?? defaultTelegramSettings).botToken, secret) },
+    telegram: {
+      ...(s.telegram ?? defaultTelegramSettings),
+      bots: (s.telegram ?? defaultTelegramSettings).bots.map((bot) => ({
+        ...bot,
+        botToken: decrypt(bot.botToken, secret)
+      }))
+    },
     mediaSource: { ...s.mediaSource, accessToken: decrypt(s.mediaSource.accessToken, secret) }
   };
 }

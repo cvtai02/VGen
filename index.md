@@ -5,7 +5,7 @@ VGen is a video generation service with a Fastify API and an admin UI for runtim
 ## Folders
 
 - `app/` - Main business source code. Exposes the application APIs, Prisma schema, use cases, infrastructure adapters, and Remotion templates.
-- `ui/` - Admin interface for logging in with the system secret, configuring runtime settings, creating Zhihugen render jobs, and reviewing job status.
+- `ui/` - Admin interface for logging in with the system secret, configuring runtime settings, managing Telegram bot delivery destinations, creating Zhihugen render jobs, and reviewing job status.
 - `handoffs/` - Temporary coordination documents between backend and UI work.
   - `handoffs/backend-to-ui/` - Backend API contract changes for UI follow-up.
   - `handoffs/backend-to-ui/archive/` - Completed backend-to-UI handoffs.
@@ -38,5 +38,7 @@ pnpm dev
 ```
 
 The API listens on `http://localhost:3000` by default. The UI listens on `http://localhost:5173`.
+
+Telegram delivery is configured from the admin UI Telegram page. It supports multiple bot tokens, multiple chat destinations per bot, manual destination add/remove, chat sync from Telegram updates, and automatic upload of completed generated videos to all enabled destinations.
 
 Agents must read this file and `rules.md` before editing code. Inside `app/` or `ui/`, also read the nearest `index.md` and `rules.md`.

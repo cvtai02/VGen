@@ -1,6 +1,6 @@
 import { Loader, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { settingsClient, type TelegramSettings, type TtsSettings, type ZhihugenSettings } from "../api/clients.js";
+import { settingsClient, type TtsSettings, type ZhihugenSettings } from "../api/clients.js";
 
 const defaultZhihugen: ZhihugenSettings = {
   defaultOutputDirectory: "",
@@ -13,29 +13,20 @@ const defaultZhihugen: ZhihugenSettings = {
 
 export function SettingsPage() {
   const [tts, setTts] = useState<TtsSettings>({ baseUrl: "", apiKey: "" });
-  const [telegram, setTelegram] = useState<TelegramSettings>({
-    enabled: false,
-    botToken: "",
-    chatId: "",
-    captionTemplate: "{label}\n\n{cdnUrl}"
-  });
   const [zhihugen, setZhihugen] = useState<ZhihugenSettings>(defaultZhihugen);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
   const [ttsKeyDirty, setTtsKeyDirty] = useState(false);
-  const [telegramTokenDirty, setTelegramTokenDirty] = useState(false);
 
   useEffect(() => {
     Promise.all([
       settingsClient.getTts(),
-      settingsClient.getTelegram(),
       settingsClient.getZhihugen(),
     ])
-      .then(([t, tg, z]) => {
+      .then(([t, z]) => {
         setTts({ baseUrl: t.baseUrl, apiKey: "" });
-        setTelegram({ ...tg, botToken: "" });
         setZhihugen(z);
       })
       .catch(() => setError("Failed to load settings."))
@@ -49,23 +40,14 @@ export function SettingsPage() {
     try {
       const ttsPayload: Partial<TtsSettings> = { baseUrl: tts.baseUrl };
       if (ttsKeyDirty) ttsPayload.apiKey = tts.apiKey;
-      const telegramPayload: Partial<TelegramSettings> = {
-        enabled: telegram.enabled,
-        chatId: telegram.chatId,
-        captionTemplate: telegram.captionTemplate
-      };
-      if (telegramTokenDirty) telegramPayload.botToken = telegram.botToken;
 
-      const [t, tg, z] = await Promise.all([
+      const [t, z] = await Promise.all([
         settingsClient.updateTts(ttsPayload),
-        settingsClient.updateTelegram(telegramPayload),
         settingsClient.updateZhihugen(zhihugen),
       ]);
       setTts({ baseUrl: t.baseUrl, apiKey: "" });
-      setTelegram({ ...tg, botToken: "" });
       setZhihugen(z);
       setTtsKeyDirty(false);
-      setTelegramTokenDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
@@ -105,47 +87,6 @@ export function SettingsPage() {
               value={tts.apiKey}
               placeholder="********  (leave blank to keep current)"
               onChange={(e) => { setTtsKeyDirty(true); setTts((t) => ({ ...t, apiKey: e.target.value })); }}
-            />
-          </div>
-
-          <div className="settings-section-title" style={{ marginTop: "1.5rem" }}>Telegram Delivery</div>
-
-          <label className="settings-toggle">
-            <input
-              type="checkbox"
-              checked={telegram.enabled}
-              onChange={(e) => setTelegram((t) => ({ ...t, enabled: e.target.checked }))}
-            />
-            <span>Upload completed Zhihugen videos to Telegram</span>
-          </label>
-
-          <div className="form-group">
-            <label className="form-label">Bot token</label>
-            <input
-              type="password"
-              value={telegram.botToken}
-              placeholder={telegram.hasBotToken ? "********  (leave blank to keep current)" : "123456:ABC..."}
-              onChange={(e) => { setTelegramTokenDirty(true); setTelegram((t) => ({ ...t, botToken: e.target.value })); }}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Group chat ID</label>
-            <input
-              type="text"
-              value={telegram.chatId}
-              placeholder="-1001234567890 or @public_group"
-              onChange={(e) => setTelegram((t) => ({ ...t, chatId: e.target.value }))}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Caption template</label>
-            <textarea
-              className="short"
-              value={telegram.captionTemplate}
-              placeholder="{label}\n\n{cdnUrl}"
-              onChange={(e) => setTelegram((t) => ({ ...t, captionTemplate: e.target.value }))}
             />
           </div>
 

@@ -49,9 +49,13 @@ export interface ZhihugenJobResult {
   cdnUrl?: string;
   localPath?: string;
   label: string;
-  telegram?: {
+  telegram?: Array<{
     provider: "telegram";
     status: "sent" | "failed";
+    botId?: string;
+    botName?: string;
+    destinationId?: string;
+    destinationName?: string;
     chatId?: string;
     messageId?: number;
     fileId?: string;
@@ -59,7 +63,7 @@ export interface ZhihugenJobResult {
     sentAt?: string;
     error?: string;
     failedAt?: string;
-  } | null;
+  }> | null;
 }
 
 function safeJsonParse<T>(json: string | null | undefined): T | null {

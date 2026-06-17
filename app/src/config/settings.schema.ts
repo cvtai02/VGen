@@ -1,11 +1,59 @@
 import { z } from "zod";
 
+export const defaultTelegramCaptionTemplate = "{label}\n\n{cdnUrl}";
+
 export const defaultTelegramSettings = {
   enabled: false,
-  botToken: "",
-  chatId: "",
-  captionTemplate: "{label}\n\n{cdnUrl}"
+  captionTemplate: defaultTelegramCaptionTemplate,
+  bots: []
 };
+
+const telegramDestinationSchema = z.object({
+  id: z.string(),
+  chatId: z.string(),
+  name: z.string(),
+  type: z.string().optional(),
+  username: z.string().optional(),
+  enabled: z.boolean().default(true)
+});
+
+const telegramBotSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  username: z.string().optional(),
+  botToken: z.string(),
+  enabled: z.boolean().default(true),
+  destinations: z.array(telegramDestinationSchema).default([])
+});
+
+const telegramSettingsSchema = z.preprocess((value) => {
+  if (!value || typeof value !== "object") return defaultTelegramSettings;
+  const raw = value as Record<string, unknown>;
+  if (Array.isArray(raw.bots)) return raw;
+
+  const botToken = typeof raw.botToken === "string" ? raw.botToken : "";
+  const chatId = typeof raw.chatId === "string" ? raw.chatId : "";
+  const captionTemplate = typeof raw.captionTemplate === "string" ? raw.captionTemplate : defaultTelegramCaptionTemplate;
+  return {
+    enabled: typeof raw.enabled === "boolean" ? raw.enabled : false,
+    captionTemplate,
+    bots: botToken || chatId
+      ? [{
+        id: "legacy-telegram-bot",
+        name: "Telegram Bot",
+        botToken,
+        enabled: true,
+        destinations: chatId
+          ? [{ id: "legacy-telegram-chat", chatId, name: chatId, enabled: true }]
+          : []
+      }]
+      : []
+  };
+}, z.object({
+  enabled: z.boolean(),
+  captionTemplate: z.string(),
+  bots: z.array(telegramBotSchema).default([])
+}));
 
 export const runtimeSettingsSchema = z.object({
   app: z.object({
@@ -29,12 +77,7 @@ export const runtimeSettingsSchema = z.object({
     baseUrl: z.string(),
     apiKey: z.string()
   }),
-  telegram: z.object({
-    enabled: z.boolean(),
-    botToken: z.string(),
-    chatId: z.string(),
-    captionTemplate: z.string()
-  }).default(defaultTelegramSettings),
+  telegram: telegramSettingsSchema.default(defaultTelegramSettings),
   mediaSource: z.object({
     provider: z.enum(["mock", "internal-api"]),
     internalApiBaseUrl: z.string(),
@@ -50,6 +93,9 @@ export const runtimeSettingsSchema = z.object({
 });
 
 export type RuntimeSettings = z.infer<typeof runtimeSettingsSchema>;
+export type TelegramSettings = z.infer<typeof telegramSettingsSchema>;
+export type TelegramBotSettings = z.infer<typeof telegramBotSchema>;
+export type TelegramDestinationSettings = z.infer<typeof telegramDestinationSchema>;
 
 export const defaultSettings: RuntimeSettings = {
   app: {

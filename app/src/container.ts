@@ -52,7 +52,7 @@ export async function createContainer(): Promise<AppContainer> {
     renderLimiter: new ConcurrencyLimiter(3),
     idGenerator,
     createAdminAccessTokenUseCase: new CreateAdminAccessTokenUseCase(systemSecret, issuedAdminTokens),
-    verifyAdminAccessTokenUseCase: new VerifyAdminAccessTokenUseCase(issuedAdminTokens),
+    verifyAdminAccessTokenUseCase: new VerifyAdminAccessTokenUseCase(issuedAdminTokens, systemSecret),
     executeRenderJobUseCase: new ExecuteRenderJobUseCase(prismaClient, renderEngine, storage, videoDelivery),
     confirmUploadRenderJobUseCase: new ConfirmUploadRenderJobUseCase(prismaClient, storage, videoDelivery),
     markRenderJobFailedUseCase: new MarkRenderJobFailedUseCase(prismaClient)

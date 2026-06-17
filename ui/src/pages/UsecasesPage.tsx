@@ -2,21 +2,10 @@ import { BookOpen, CheckCircle2, Clock3, Code2, FileImage, LockKeyhole, UploadCl
 import { apiBaseUrl } from "../api/clients.js";
 import "../styles/usecases.css";
 
-const authCode = `POST ${apiBaseUrl}/api/auth/login
-Content-Type: application/json
-
-{
-  "systemSecret": "<system-secret>"
-}
-
-Response 200
-{
-  "accessToken": "<bearer-token>",
-  "tokenType": "Bearer"
-}`;
+const authCode = `Authorization: Bearer <system-token>`;
 
 const renderCode = `POST ${apiBaseUrl}/api/zhihugen/render
-Authorization: Bearer <bearer-token>
+Authorization: Bearer <system-token>
 Content-Type: multipart/form-data
 
 images=<file>            repeat for every scene image
@@ -25,7 +14,7 @@ label=<video label>
 previewBeforeUpload=true`;
 
 const curlCode = `curl -X POST "${apiBaseUrl}/api/zhihugen/render" \\
-  -H "Authorization: Bearer <bearer-token>" \\
+  -H "Authorization: Bearer <system-token>" \\
   -F "label=episode-001" \\
   -F "previewBeforeUpload=true" \\
   -F "images=@scene-1.png" \\
@@ -82,8 +71,8 @@ export function UsecasesPage() {
             </div>
 
             <div className="usecase-step">
-              <div className="usecase-step-title"><LockKeyhole size={15} /> Authenticate</div>
-              <p>External apps must exchange the system secret for a bearer token, then send it on every protected API call.</p>
+              <div className="usecase-step-title"><LockKeyhole size={15} /> Bearer token</div>
+              <p>External apps use the system token directly as the bearer token on every protected API call.</p>
               <pre>{authCode}</pre>
             </div>
 

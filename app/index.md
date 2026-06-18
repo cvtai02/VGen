@@ -30,8 +30,6 @@ All other runtime settings are stored in the `SystemSettings` table and loaded a
 | --- | --- | --- |
 | POST | `/api/auth/login` | Exchange `SYSTEM_SECRET` for a bearer token |
 | GET | `/api/health` | Public health check |
-| GET | `/api/settings/storage` | Get storage settings with masked secrets |
-| POST | `/api/settings/storage` | Update storage settings |
 | GET | `/api/settings/tts` | Get TTS settings with masked secrets |
 | POST | `/api/settings/tts` | Update TTS settings |
 | GET | `/api/settings/telegram` | Get Telegram delivery settings with masked bot token |

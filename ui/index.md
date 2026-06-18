@@ -8,7 +8,6 @@ Vite React admin interface for VGen.
 - Store the issued bearer token in local storage.
 - Configure DB-backed runtime settings through protected app APIs.
 - Configure Telegram delivery for completed Zhihugen videos.
-- Browse 7router storage directories and files.
 - Create Zhihugen render jobs.
 - Review and manage render job status.
 

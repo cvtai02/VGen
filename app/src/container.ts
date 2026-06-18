@@ -6,7 +6,7 @@ import type { IdGenerator } from "./core/shared-kernel/contracts/id-generator.js
 import { ConcurrencyLimiter } from "./infrastructure/concurrency/concurrency-limiter.js";
 import { TelegramVideoDeliveryClient } from "./infrastructure/delivery/telegram/telegram-video-delivery-client.js";
 import { ZhihugenRenderEngine } from "./infrastructure/render-engine/zhihugen/zhihugen-render-engine.js";
-import { SevenRouterStorageClient } from "./infrastructure/storage/7router/7router-storage-client.js";
+import { LocalStorageClient } from "./infrastructure/storage/local/local-storage-client.js";
 import { ZhihugenStore } from "./modules/zhihugen/store/zhihugen-store.js";
 import { ExecuteRenderJobUseCase } from "./modules/renders/usecases/execute-render-job.usecase.js";
 import { ConfirmUploadRenderJobUseCase } from "./modules/renders/usecases/confirm-upload-render-job.usecase.js";
@@ -40,7 +40,7 @@ export async function createContainer(): Promise<AppContainer> {
   const zhihugenStore = new ZhihugenStore(prismaClient);
   const idGenerator: IdGenerator = { createId: () => randomUUID() };
   const renderEngine = new ZhihugenRenderEngine(() => settings.tts);
-  const storage = new SevenRouterStorageClient(() => settings.storage);
+  const storage = new LocalStorageClient();
   const videoDelivery = new TelegramVideoDeliveryClient(() => settings.telegram);
   const issuedAdminTokens = new Set<string>();
 

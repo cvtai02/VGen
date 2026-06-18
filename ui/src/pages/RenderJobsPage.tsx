@@ -159,7 +159,7 @@ function JobDetail({
                       {telegram.status === "failed" && telegram.error ? `: ${telegram.error}` : ""}
                     </span>
                     {telegram.link && (
-                      <a className="router-open-link" href={telegram.link} target="_blank" rel="noopener noreferrer">
+                      <a className="job-open-link" href={telegram.link} target="_blank" rel="noopener noreferrer">
                         Open
                       </a>
                     )}

@@ -68,11 +68,6 @@ export const runtimeSettingsSchema = z.object({
     outputDirectory: z.string().min(1),
     concurrency: z.number().int().positive()
   }),
-  storage: z.object({
-    baseUrl: z.string(),
-    accessToken: z.string(),
-    absolutePathPrefix: z.string()
-  }),
   tts: z.object({
     baseUrl: z.string(),
     apiKey: z.string()
@@ -109,11 +104,6 @@ export const defaultSettings: RuntimeSettings = {
     defaultFormat: "mp4",
     outputDirectory: "./tmp/renders",
     concurrency: 1
-  },
-  storage: {
-    baseUrl: "",
-    accessToken: "",
-    absolutePathPrefix: ""
   },
   tts: {
     baseUrl: "",

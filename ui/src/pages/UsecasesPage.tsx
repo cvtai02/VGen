@@ -22,7 +22,7 @@ const curlCode = `curl -X POST "${apiBaseUrl}/api/zhihugen/render" \\
 
 const responseCode = `Response 200
 {
-  "absolutePath": "CloudflareR2/.../video.mp4"
+  "absolutePath": "C:/path/to/video.mp4"
 }`;
 
 const jobCode = `GET  ${apiBaseUrl}/api/zhihugen/jobs

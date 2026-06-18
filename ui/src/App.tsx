@@ -1,14 +1,13 @@
-import { BookOpen, Database, KeyRound, ListVideo, Loader, LogOut, Send, Video, Layers, Settings } from "lucide-react";
+import { BookOpen, KeyRound, ListVideo, Loader, LogOut, Send, Video, Layers, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { authClient, authExpiredEventName, clearAuthToken, getAuthToken, setAuthToken } from "./api/clients.js";
 import { CreateZhihugenRenderPage } from "./pages/CreateZhihugenRenderPage.js";
 import { RenderJobsPage } from "./pages/RenderJobsPage.js";
-import { SevenRouterPage } from "./pages/SevenRouterPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { TelegramPage } from "./pages/TelegramPage.js";
 import { UsecasesPage } from "./pages/UsecasesPage.js";
 
-type Page = "zhihugen" | "jobs" | "settings" | "7router" | "usecases" | "telegram";
+type Page = "zhihugen" | "jobs" | "settings" | "usecases" | "telegram";
 
 export function App() {
   const [page, setPage] = useState<Page>("jobs");
@@ -90,9 +89,6 @@ export function App() {
           <button className={page === "zhihugen" ? "active" : ""} onClick={() => setPage("zhihugen")}>
             <Layers size={16} className="nav-icon" /><span className="nav-label">Zhihugen</span>
           </button>
-          <button className={page === "7router" ? "active" : ""} onClick={() => setPage("7router")}>
-            <Database size={16} className="nav-icon" /><span className="nav-label">7router</span>
-          </button>
           <button className={page === "telegram" ? "active" : ""} onClick={() => setPage("telegram")}>
             <Send size={16} className="nav-icon" /><span className="nav-label">Telegram</span>
           </button>
@@ -109,7 +105,6 @@ export function App() {
       </nav>
       {page === "jobs" && <RenderJobsPage />}
       {page === "zhihugen" && <CreateZhihugenRenderPage />}
-      {page === "7router" && <SevenRouterPage />}
       {page === "telegram" && <TelegramPage />}
       {page === "usecases" && <UsecasesPage />}
       {page === "settings" && <SettingsPage />}

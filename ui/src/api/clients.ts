@@ -1,11 +1,5 @@
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3012";
 
-export interface StorageSettings {
-  baseUrl: string;
-  accessToken: string;
-  hasAccessToken?: boolean;
-}
-
 export interface TtsSettings {
   baseUrl: string;
   apiKey: string;
@@ -35,28 +29,6 @@ export interface TelegramBot {
   hasBotToken: boolean;
   enabled: boolean;
   destinations: TelegramDestination[];
-}
-
-export interface StorageAccessDirectory {
-  path: string;
-  access: string;
-}
-
-export interface StorageAccessResponse {
-  isAdmin: boolean;
-  directories: StorageAccessDirectory[];
-}
-
-export interface StorageBrowseItem {
-  name: string;
-  absolutePath: string;
-  type: "file" | "folder" | string;
-  sizeBytes?: number;
-  cdnUrl?: string;
-}
-
-export interface StorageBrowseResponse {
-  items: StorageBrowseItem[];
 }
 
 export interface TextBlock {
@@ -213,14 +185,6 @@ export const zhihugenClient = {
 };
 
 export const settingsClient = {
-  getStorage: () => apiFetch<StorageSettings>("/api/settings/storage"),
-  updateStorage: (body: Partial<StorageSettings>) =>
-    apiFetch<StorageSettings>("/api/settings/storage", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body)
-    }),
-
   getTts: () => apiFetch<TtsSettings>("/api/settings/tts"),
   updateTts: (body: Partial<TtsSettings>) =>
     apiFetch<TtsSettings>("/api/settings/tts", {
@@ -280,11 +244,6 @@ export const telegramClient = {
     }),
   deleteDestination: (botId: string, destinationId: string) =>
     apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}/destinations/${encodeURIComponent(destinationId)}`, { method: "DELETE" }),
-};
-
-export const storageClient = {
-  listDirectories: () => apiFetch<StorageAccessResponse>("/api/storage/directories"),
-  browse: (path: string) => apiFetch<StorageBrowseResponse>(`/api/storage/browse?path=${encodeURIComponent(path)}`),
 };
 
 export interface SixGateGroup {

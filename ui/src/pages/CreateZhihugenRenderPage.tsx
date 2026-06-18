@@ -141,11 +141,11 @@ function ZhihugenSettingsDialog({
         <div className="modal-body">
           <div className="form-group">
             <label className="form-label">Background Video Path</label>
-            <input type="text" value={bgVideo} onChange={(e) => setBgVideo(e.target.value)} placeholder="CloudflareR2/..." className="font-mono" />
+            <input type="text" value={bgVideo} onChange={(e) => setBgVideo(e.target.value)} placeholder="./media/background.mp4 or https://..." className="font-mono" />
           </div>
           <div className="form-group">
             <label className="form-label">Background Music Path</label>
-            <input type="text" value={bgMusic} onChange={(e) => setBgMusic(e.target.value)} placeholder="CloudflareR2/... (optional)" className="font-mono" />
+            <input type="text" value={bgMusic} onChange={(e) => setBgMusic(e.target.value)} placeholder="./media/music.mp3 (optional)" className="font-mono" />
           </div>
           {telegramDests.length > 0 && (
             <div className="form-group">

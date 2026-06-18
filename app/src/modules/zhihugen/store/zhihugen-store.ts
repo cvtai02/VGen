@@ -29,8 +29,8 @@ const STORE_ID = 2;
 
 const defaultData: ZhihugenStoreData = {
   settings: {
-    defaultOutputDirectory: "CloudflareR2/cvtai105/minfect-entertainment/vgen/zhihugen",
-    defaultBackgroundVideoPath: "CloudflareR2/cvtai105/minfect-entertainment/mp4/3m24s.mp4",
+    defaultOutputDirectory: "./tmp/renders/zhihugen",
+    defaultBackgroundVideoPath: "./media/background.mp4",
     defaultBackgroundMusicPath: "",
     defaultFps: 30,
     defaultImageFit: "contain",

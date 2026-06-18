@@ -31,7 +31,6 @@ function decrypt(value: string, secret: string): string {
 function encryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
   return {
     ...s,
-    storage: { ...s.storage, accessToken: encrypt(s.storage.accessToken, secret) },
     tts: { ...s.tts, apiKey: encrypt(s.tts.apiKey, secret) },
     telegram: {
       ...(s.telegram ?? defaultTelegramSettings),
@@ -47,7 +46,6 @@ function encryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
 function decryptSecrets(s: RuntimeSettings, secret: string): RuntimeSettings {
   return {
     ...s,
-    storage: { ...s.storage, accessToken: decrypt(s.storage.accessToken, secret) },
     tts: { ...s.tts, apiKey: decrypt(s.tts.apiKey, secret) },
     telegram: {
       ...(s.telegram ?? defaultTelegramSettings),

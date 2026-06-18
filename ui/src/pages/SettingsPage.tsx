@@ -100,7 +100,7 @@ export function SettingsPage() {
             <input
               type="text"
               value={zhihugen.defaultOutputDirectory}
-              placeholder="CloudflareR2/bucket/path"
+              placeholder="./tmp/renders"
               onChange={(e) => setZhihugen((z) => ({ ...z, defaultOutputDirectory: e.target.value }))}
             />
           </div>
@@ -110,7 +110,7 @@ export function SettingsPage() {
             <input
               type="text"
               value={zhihugen.defaultBackgroundVideoPath}
-              placeholder="CloudflareR2/bucket/video.mp4"
+              placeholder="./media/background.mp4 or https://..."
               onChange={(e) => setZhihugen((z) => ({ ...z, defaultBackgroundVideoPath: e.target.value }))}
             />
           </div>

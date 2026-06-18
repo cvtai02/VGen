@@ -37,7 +37,7 @@ pnpm --filter app db:migrate
 pnpm dev
 ```
 
-The API listens on `http://localhost:3000` by default. The UI listens on `http://localhost:5173`.
+The API listens on `http://localhost:3000` by default. The UI listens on `http://localhost:5200`.
 
 Telegram delivery is configured from the admin UI Telegram page. It supports multiple bot tokens, multiple chat destinations per bot, manual destination add/remove, chat sync from Telegram updates, and automatic upload of completed generated videos to all enabled destinations.
 

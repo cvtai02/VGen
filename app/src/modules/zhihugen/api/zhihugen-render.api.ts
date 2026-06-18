@@ -1,17 +1,22 @@
-import multipart from "@fastify/multipart";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, basename } from "node:path";
+import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { apiError } from "../../../core/shared-kernel/api-error.js";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import { RenderJobType } from "../../../core/shared-kernel/enums/render-job-type.js";
 import type { AppContainer } from "../../../container.js";
-import { generateJobId, generateOutputFilename, type ZhihugenJobRequest } from "../store/job-helpers.js";
+import { generateJobId, generateOutputFilename, type TextBlock, type ZhihugenJobRequest } from "../store/job-helpers.js";
+import { renderTextBlocksToImages } from "../../../infrastructure/render-engine/zhihugen/text-to-threads-images.js";
 
-function sanitizeFilename(name: string): string {
-  return basename(name).replace(/[^a-zA-Z0-9._-]/g, "_") || "image";
+interface RenderRequestBody {
+  blocks: TextBlock[];
+  title: string;
+  caption?: string;
+  destinationIds?: string[];
+  sixgateGroupId?: string;
+  previewBeforeUpload?: boolean;
 }
 
 async function createAndRender(container: AppContainer, req: ZhihugenJobRequest, reply: { code: (n: number) => { send: (b: unknown) => unknown } }) {
@@ -43,64 +48,50 @@ async function createAndRender(container: AppContainer, req: ZhihugenJobRequest,
   }
 }
 
-// POST /api/zhihugen/render  — multipart: images (files) + scripts + label
 export async function registerZhihugenRenderApis(app: FastifyInstance, container: AppContainer): Promise<void> {
-  await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 50 } });
+  app.post<{ Body: RenderRequestBody }>("/api/zhihugen/render", async (request, reply) => {
+    const { blocks, title, caption, destinationIds, sixgateGroupId, previewBeforeUpload } = request.body ?? {};
 
-  app.post("/api/zhihugen/render", async (request, reply) => {
+    if (!blocks?.length) {
+      return reply.code(400).send(apiError(400, "Bad Request", "At least one text block is required."));
+    }
+    if (!title?.trim()) {
+      return reply.code(400).send(apiError(400, "Bad Request", "Title is required."));
+    }
+
     const store = await container.zhihugenStore.get();
     const tmpDir = join(tmpdir(), `zhihugen-${randomUUID()}`);
 
-    const imagePaths: string[] = [];
-    const scripts: string[] = [];
-    let label = "";
-    let previewBeforeUpload = false;
-
     try {
       await mkdir(tmpDir, { recursive: true });
-      for await (const part of request.parts()) {
-        if (part.type === "file" && part.fieldname === "images") {
-          const buf = await part.toBuffer();
-          const dest = join(tmpDir, `${imagePaths.length}_${sanitizeFilename(part.filename ?? "image")}`);
-          await writeFile(dest, buf);
-          imagePaths.push(dest);
-        } else if (part.type === "field") {
-          const val = part.value as string;
-          if (part.fieldname === "scripts") scripts.push(val);
-          else if (part.fieldname === "label") label = val.slice(0, 500);
-          else if (part.fieldname === "previewBeforeUpload") previewBeforeUpload = val === "true";
-        }
-      }
+      const imagePaths = await renderTextBlocksToImages(blocks, tmpDir);
+      const scripts = blocks.map((b) => b.text);
+
+      const req: ZhihugenJobRequest = {
+        blocks,
+        images: imagePaths,
+        scripts,
+        title: title.trim(),
+        caption: caption?.trim() ?? "",
+        label: title.trim(),
+        outputFilename: generateOutputFilename(),
+        outputDirectory: store.settings.defaultOutputDirectory,
+        backgroundVideoPath: store.settings.defaultBackgroundVideoPath,
+        ttsModel: store.settings.defaultTtsModel,
+        resolution: store.settings.defaultResolution,
+        fps: store.settings.defaultFps,
+        imageFit: store.settings.defaultImageFit,
+        sceneCount: blocks.length,
+        previewBeforeUpload: previewBeforeUpload ?? false,
+        telegramCaptionTemplate: container.settings.telegram.captionTemplate,
+        destinationIds: destinationIds?.length ? destinationIds : undefined,
+        sixgateGroupId: sixgateGroupId || undefined
+      };
+
+      return await createAndRender(container, req, reply);
     } catch (err) {
       await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
       throw err;
     }
-
-    if (imagePaths.length === 0) {
-      await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-      return reply.code(400).send(apiError(400, "Bad Request", "No images provided."));
-    }
-    if (!label.trim()) {
-      await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
-      return reply.code(400).send(apiError(400, "Bad Request", "Label is required."));
-    }
-
-    const req: ZhihugenJobRequest = {
-      images: imagePaths,
-      scripts,
-      label,
-      outputFilename: generateOutputFilename(),
-      outputDirectory: store.settings.defaultOutputDirectory,
-      backgroundVideoPath: store.settings.defaultBackgroundVideoPath,
-      ttsModel: store.settings.defaultTtsModel,
-      resolution: store.settings.defaultResolution,
-      fps: store.settings.defaultFps,
-      imageFit: store.settings.defaultImageFit,
-      sceneCount: imagePaths.length,
-      previewBeforeUpload,
-      telegramCaptionTemplate: container.settings.telegram.captionTemplate
-    };
-
-    return createAndRender(container, req, reply);
   });
 }

@@ -37,9 +37,12 @@ export class TelegramVideoDeliveryClient implements VideoDeliveryClient {
   async deliverVideo(input: VideoDeliveryInput): Promise<VideoDeliveryOutcome[] | null> {
     const settings = this.getSettings();
     if (!settings.enabled) return null;
-    const targets = settings.bots
+    const allTargets = settings.bots
       .filter((bot) => bot.enabled)
       .flatMap((bot) => bot.destinations.filter((destination) => destination.enabled).map((destination) => ({ bot, destination })));
+    const targets = input.destinationIds?.length
+      ? allTargets.filter(({ destination }) => input.destinationIds!.includes(destination.id))
+      : allTargets;
     if (targets.length === 0) return null;
 
     const fileStat = await stat(input.localPath);

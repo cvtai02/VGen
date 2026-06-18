@@ -3,10 +3,13 @@ import type { PrismaContext } from "../../../core/database/prisma-context.js";
 export interface ZhihugenSettings {
   defaultOutputDirectory: string;
   defaultBackgroundVideoPath: string;
+  defaultBackgroundMusicPath: string;
   defaultFps: number;
   defaultImageFit: "contain" | "cover";
   defaultResolution: string;
   defaultTtsModel: string;
+  defaultTelegramDestinationIds: string[];
+  defaultSixgateGroupId: string;
 }
 
 export interface TtsModel {
@@ -28,10 +31,13 @@ const defaultData: ZhihugenStoreData = {
   settings: {
     defaultOutputDirectory: "CloudflareR2/cvtai105/minfect-entertainment/vgen/zhihugen",
     defaultBackgroundVideoPath: "CloudflareR2/cvtai105/minfect-entertainment/mp4/3m24s.mp4",
+    defaultBackgroundMusicPath: "",
     defaultFps: 30,
     defaultImageFit: "contain",
     defaultResolution: "1080x1920",
-    defaultTtsModel: "edge-tts/vi-VN-HoaiMyNeural"
+    defaultTtsModel: "edge-tts/vi-VN-HoaiMyNeural",
+    defaultTelegramDestinationIds: [],
+    defaultSixgateGroupId: ""
   },
   ttsModels: [{ id: "edge-tts/vi-VN-HoaiMyNeural", name: "vi-VN-HoaiMy (Edge TTS)", provider: "edge-tts", enabled: true }],
   defaultTtsModelId: "edge-tts/vi-VN-HoaiMyNeural"

@@ -1,4 +1,4 @@
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3012";
 
 export interface StorageSettings {
   baseUrl: string;
@@ -59,6 +59,20 @@ export interface StorageBrowseResponse {
   items: StorageBrowseItem[];
 }
 
+export interface TextBlock {
+  text: string;
+  author?: string;
+}
+
+export interface ZhihugenRenderRequest {
+  blocks: TextBlock[];
+  title: string;
+  caption?: string;
+  destinationIds?: string[];
+  sixgateGroupId?: string;
+  previewBeforeUpload?: boolean;
+}
+
 export type ZhihugenRenderResponseDto =
   | { absolutePath: string }
   | { jobId: string; status: "awaiting_upload" };
@@ -97,10 +111,13 @@ export interface TtsModel {
 export interface ZhihugenSettings {
   defaultOutputDirectory: string;
   defaultBackgroundVideoPath: string;
+  defaultBackgroundMusicPath: string;
   defaultFps: number;
   defaultImageFit: "contain" | "cover";
   defaultResolution: string;
   defaultTtsModel: string;
+  defaultTelegramDestinationIds: string[];
+  defaultSixgateGroupId: string;
 }
 
 interface LoginResponse {
@@ -177,10 +194,11 @@ export const authClient = {
 };
 
 export const zhihugenClient = {
-  render: (form: FormData) =>
+  render: (body: ZhihugenRenderRequest) =>
     apiFetch<ZhihugenRenderResponseDto>("/api/zhihugen/render", {
       method: "POST",
-      body: form
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
     }),
 
   listJobs: () => apiFetch<ZhihugenJobDto[]>("/api/zhihugen/jobs"),
@@ -267,4 +285,19 @@ export const telegramClient = {
 export const storageClient = {
   listDirectories: () => apiFetch<StorageAccessResponse>("/api/storage/directories"),
   browse: (path: string) => apiFetch<StorageBrowseResponse>(`/api/storage/browse?path=${encodeURIComponent(path)}`),
+};
+
+export interface SixGateGroup {
+  id: string;
+  name: string;
+}
+
+const SIXGATE_BASE_URL = import.meta.env.VITE_SIXGATE_BASE_URL ?? "http://localhost:20130";
+
+export const sixgateClient = {
+  listGroups: async (): Promise<SixGateGroup[]> => {
+    const res = await fetch(`${SIXGATE_BASE_URL}/api/groups`);
+    if (!res.ok) return [];
+    return res.json();
+  },
 };

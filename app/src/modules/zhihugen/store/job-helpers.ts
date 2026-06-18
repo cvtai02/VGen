@@ -27,9 +27,17 @@ export function toZhihugenStatus(dbStatus: string): "pending" | "awaiting_upload
   return "pending";
 }
 
+export interface TextBlock {
+  text: string;
+  author?: string;
+}
+
 export interface ZhihugenJobRequest {
+  blocks: TextBlock[];
   images: string[];
   scripts: string[];
+  title: string;
+  caption: string;
   label: string;
   outputFilename: string;
   outputDirectory: string;
@@ -42,6 +50,8 @@ export interface ZhihugenJobRequest {
   previewBeforeUpload?: boolean;
   backgroundVideoLocalPath?: string;
   telegramCaptionTemplate?: string;
+  destinationIds?: string[];
+  sixgateGroupId?: string;
 }
 
 export interface ZhihugenJobResult {

@@ -2,6 +2,7 @@ export interface VideoDeliveryInput {
   localPath: string;
   filename: string;
   caption: string;
+  destinationIds?: string[];
 }
 
 export interface VideoDeliveryResult {

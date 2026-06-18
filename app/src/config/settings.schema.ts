@@ -99,8 +99,8 @@ export type TelegramDestinationSettings = z.infer<typeof telegramDestinationSche
 
 export const defaultSettings: RuntimeSettings = {
   app: {
-    baseUrl: "http://localhost:3000",
-    publicBaseUrl: "http://localhost:3000"
+    baseUrl: "http://localhost:3012",
+    publicBaseUrl: "http://localhost:3012"
   },
   render: {
     defaultWidth: 1080,

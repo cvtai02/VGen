@@ -5,10 +5,13 @@ import { settingsClient, type TtsSettings, type ZhihugenSettings } from "../api/
 const defaultZhihugen: ZhihugenSettings = {
   defaultOutputDirectory: "",
   defaultBackgroundVideoPath: "",
+  defaultBackgroundMusicPath: "",
   defaultFps: 30,
   defaultImageFit: "contain",
   defaultResolution: "1080x1920",
   defaultTtsModel: "",
+  defaultTelegramDestinationIds: [],
+  defaultSixgateGroupId: "",
 };
 
 export function SettingsPage() {

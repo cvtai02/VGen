@@ -84,6 +84,14 @@ export interface TtsModel {
   enabled: boolean;
 }
 
+export interface JobEvent {
+  id: string;
+  step: string;
+  status: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface ZhihugenSettings {
   defaultOutputDirectory: string;
   defaultBackgroundVideoPath: string;
@@ -185,6 +193,8 @@ export const zhihugenClient = {
     apiFetch<{ status: string }>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/discard`, { method: "POST" }),
   resendJob: (id: string) =>
     apiFetch<ZhihugenJobDto>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/resend`, { method: "POST" }),
+  getJobEvents: (id: string) =>
+    apiFetch<JobEvent[]>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/events`),
 
   listTtsModels: () => apiFetch<{ models: TtsModel[]; defaultModelId: string }>("/api/tts/models"),
 };
@@ -229,6 +239,9 @@ export const settingsClient = {
     }),
 
   getTelegram: () => apiFetch<TelegramSettings>("/api/settings/telegram"),
+
+  testTts: () => apiFetch<{ ok: boolean }>("/api/settings/tts/test", { method: "POST" }),
+  testStorage: () => apiFetch<{ ok: boolean }>("/api/settings/storage/test", { method: "POST" }),
 
   getZhihugen: () => apiFetch<ZhihugenSettings>("/api/features/zhihugen/settings"),
   updateZhihugen: (body: Partial<ZhihugenSettings>) =>

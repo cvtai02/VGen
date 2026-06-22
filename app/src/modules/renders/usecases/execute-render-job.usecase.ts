@@ -68,10 +68,11 @@ export class ExecuteRenderJobUseCase {
     const bgVideoReady = (async () => {
       await mkdir(CACHE_DIR, { recursive: true });
       const cached = cachePath(req.backgroundVideoPath);
-      if (!await fileExists(cached)) {
+      const cacheHit = await fileExists(cached);
+      if (!cacheHit) {
         await downloadUrl(req.backgroundVideoPath, cached);
       }
-      await this.emitEvent(renderJobId, "download_resources", "completed");
+      await this.emitEvent(renderJobId, "download_resources", "completed", { cacheHit });
       return cached;
     })();
 

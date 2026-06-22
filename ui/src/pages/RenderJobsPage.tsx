@@ -24,7 +24,7 @@ const STEP_META: Record<string, { label: string; subtitle: string; icon: typeof 
 };
 
 type StepStatus = "pending" | "running" | "completed" | "failed";
-type StepState = { status: StepStatus; time?: string; startedAt?: string; completedAt?: string };
+type StepState = { status: StepStatus; time?: string; startedAt?: string; completedAt?: string; metadata?: Record<string, unknown> };
 
 const STATUS_LABEL: Record<StepStatus, string> = {
   pending: "Pending",
@@ -41,11 +41,11 @@ const STATUS_STYLE: Record<StepStatus, { border: string; bg: string; text: strin
 };
 
 function deriveStepMap(events: JobEvent[]): Record<string, StepState> {
-  const raw = new Map<string, { started?: string; completed?: string; failed?: string }>();
+  const raw = new Map<string, { started?: string; completed?: string; failed?: string; metadata?: Record<string, unknown> }>();
   for (const e of events) {
     const entry = raw.get(e.step) ?? {};
     if (e.status === "started") entry.started = e.createdAt;
-    else if (e.status === "completed") entry.completed = e.createdAt;
+    else if (e.status === "completed") { entry.completed = e.createdAt; if (e.metadata) entry.metadata = e.metadata; }
     else if (e.status === "failed") entry.failed = e.createdAt;
     raw.set(e.step, entry);
   }
@@ -55,7 +55,7 @@ function deriveStepMap(events: JobEvent[]): Record<string, StepState> {
     const entry = raw.get(key);
     if (!entry) { result[key] = { status: "pending" }; continue; }
     if (entry.failed) result[key] = { status: "failed", time: entry.failed, startedAt: entry.started, completedAt: entry.failed };
-    else if (entry.completed) result[key] = { status: "completed", time: entry.completed, startedAt: entry.started, completedAt: entry.completed };
+    else if (entry.completed) result[key] = { status: "completed", time: entry.completed, startedAt: entry.started, completedAt: entry.completed, metadata: entry.metadata };
     else if (entry.started) result[key] = { status: "running", time: entry.started, startedAt: entry.started };
     else result[key] = { status: "pending" };
   }
@@ -144,6 +144,14 @@ function PNode({ stepKey, state, nodeRef, expanded, onToggle, children }: {
               <div className="pn-detail-row">
                 <span className="pn-detail-label">Duration</span>
                 <span className="pn-detail-value">{duration}</span>
+              </div>
+            )}
+            {state.metadata?.cacheHit != null && (
+              <div className="pn-detail-row">
+                <span className="pn-detail-label">Cache</span>
+                <span className="pn-detail-value" style={{ color: state.metadata.cacheHit ? "var(--success)" : "var(--text-muted)" }}>
+                  {state.metadata.cacheHit ? "Hit" : "Miss"}
+                </span>
               </div>
             )}
           </div>

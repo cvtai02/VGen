@@ -1,11 +1,12 @@
 import { createReadStream } from "node:fs";
 import { stat, unlink } from "node:fs/promises";
+import { basename } from "node:path";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { apiError } from "../../../core/shared-kernel/api-error.js";
 import { RenderJobType } from "../../../core/shared-kernel/enums/render-job-type.js";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import type { AppContainer } from "../../../container.js";
-import { formatJobResponse, toZhihugenStatus } from "../store/job-helpers.js";
+import { formatJobResponse, toZhihugenStatus, type ZhihugenJobRequest, type ZhihugenJobResult } from "../store/job-helpers.js";
 
 type IdParam = { Params: { id: string } };
 
@@ -138,5 +139,66 @@ export async function registerZhihugenJobsApis(app: FastifyInstance, container: 
     });
 
     return { status: "discarded" };
+  });
+
+  // GET /api/zhihugen/jobs/:id/events
+  app.get<IdParam>("/api/zhihugen/jobs/:id/events", async (request, reply) => {
+    const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
+
+    const events = await container.prisma.renderJobEvent.findMany({
+      where: { renderJobId: request.params.id },
+      orderBy: { createdAt: "asc" }
+    });
+
+    return events.map((e) => {
+      let metadata: Record<string, unknown> | undefined;
+      if (e.metadataJson) try { metadata = JSON.parse(e.metadataJson); } catch {}
+      return {
+        id: e.id,
+        step: e.message.split(":")[0],
+        status: e.message.split(":")[1] ?? e.level,
+        metadata,
+        createdAt: e.createdAt.toISOString()
+      };
+    });
+  });
+
+  // POST /api/zhihugen/jobs/:id/resend  — resend completed video to Telegram
+  app.post<IdParam>("/api/zhihugen/jobs/:id/resend", async (request, reply) => {
+    const job = await container.prisma.renderJob.findUnique({ where: { id: request.params.id } });
+    if (!job) return reply.code(404).send(apiError(404, "Not Found", "Job not found."));
+    if (job.status !== RenderJobStatus.Completed)
+      return reply.code(409).send(apiError(409, "Conflict", "Only completed jobs can be resent."));
+
+    const result = JSON.parse(job.resultJson!) as ZhihugenJobResult;
+    if (!result.absolutePath)
+      return reply.code(409).send(apiError(409, "Conflict", "Job has no output file path."));
+
+    await stat(result.absolutePath).catch(() => {
+      throw new Error("Output file no longer exists on disk.");
+    });
+
+    const req = JSON.parse(job.requestJson) as ZhihugenJobRequest;
+    const caption = `/queue\n@title: ${req.title}\n@caption: ${req.caption}`;
+
+    const telegram = await container.videoDelivery.deliverVideo({
+      localPath: result.absolutePath,
+      filename: basename(result.absolutePath),
+      caption,
+      destinationIds: req.destinationIds
+    });
+
+    await container.prisma.renderJob.update({
+      where: { id: job.id },
+      data: {
+        resultJson: JSON.stringify({ ...result, telegram })
+      }
+    });
+
+    return formatJobResponse({
+      ...job,
+      resultJson: JSON.stringify({ ...result, telegram })
+    });
   });
 }

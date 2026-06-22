@@ -2,9 +2,7 @@ import { Plus, Trash2, Loader, Copy, Upload, X, Settings, GripVertical, Send } f
 import { useEffect, useState } from "react";
 import {
   settingsClient,
-  sixgateClient,
   zhihugenClient,
-  type SixGateGroup,
   type TelegramDestination,
   type TextBlock,
   type ZhihugenRenderRequest,
@@ -85,21 +83,18 @@ function ZhihugenSettingsDialog({
   open,
   settings,
   telegramDests,
-  sixgateGroups,
   onSave,
   onClose,
 }: {
   open: boolean;
   settings: ZhihugenSettings | null;
   telegramDests: { botId: string; botName: string; dest: TelegramDestination }[];
-  sixgateGroups: SixGateGroup[];
   onSave: (s: Partial<ZhihugenSettings>) => Promise<void>;
   onClose: () => void;
 }) {
   const [bgVideo, setBgVideo] = useState("");
   const [bgMusic, setBgMusic] = useState("");
   const [selDestIds, setSelDestIds] = useState<Set<string>>(new Set());
-  const [selGroupId, setSelGroupId] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -107,7 +102,6 @@ function ZhihugenSettingsDialog({
     setBgVideo(settings.defaultBackgroundVideoPath);
     setBgMusic(settings.defaultBackgroundMusicPath ?? "");
     setSelDestIds(new Set(settings.defaultTelegramDestinationIds ?? []));
-    setSelGroupId(settings.defaultSixgateGroupId ?? "");
   }, [settings]);
 
   if (!open) return null;
@@ -123,7 +117,6 @@ function ZhihugenSettingsDialog({
         defaultBackgroundVideoPath: bgVideo.trim(),
         defaultBackgroundMusicPath: bgMusic.trim(),
         defaultTelegramDestinationIds: [...selDestIds],
-        defaultSixgateGroupId: selGroupId,
       });
       onClose();
     } finally {
@@ -160,17 +153,6 @@ function ZhihugenSettingsDialog({
               </div>
             </div>
           )}
-          {sixgateGroups.length > 0 && (
-            <div className="form-group">
-              <label className="form-label">Default 6Gate Group</label>
-              <select value={selGroupId} onChange={(e) => setSelGroupId(e.target.value)}>
-                <option value="">— None —</option>
-                {sixgateGroups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
@@ -199,8 +181,6 @@ export function CreateZhihugenRenderPage() {
 
   const [telegramDests, setTelegramDests] = useState<{ botId: string; botName: string; dest: TelegramDestination }[]>([]);
   const [selectedDestIds, setSelectedDestIds] = useState<Set<string>>(new Set());
-  const [sixgateGroups, setSixgateGroups] = useState<SixGateGroup[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState("");
 
   const [zhgSettings, setZhgSettings] = useState<ZhihugenSettings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -208,31 +188,22 @@ export function CreateZhihugenRenderPage() {
   useEffect(() => {
     let destsLoaded: { botId: string; botName: string; dest: TelegramDestination }[] = [];
 
-    const loadTelegram = settingsClient.getTelegram().then((s) => {
+    settingsClient.getTelegram().then((s) => {
       const dests: typeof destsLoaded = [];
-      for (const bot of s.bots.filter((b) => b.enabled)) {
-        for (const d of bot.destinations.filter((d) => d.enabled)) {
+      for (const bot of s.bots) {
+        for (const d of bot.destinations) {
           dests.push({ botId: bot.id, botName: bot.name, dest: d });
         }
       }
       destsLoaded = dests;
       setTelegramDests(dests);
-    }).catch(() => {});
-
-    const loadGroups = sixgateClient.listGroups().then((groups) => {
-      setSixgateGroups(groups);
-    }).catch(() => {});
-
-    Promise.all([loadTelegram, loadGroups]).then(() => {
+    }).catch(() => {}).then(() => {
       settingsClient.getZhihugen().then((s) => {
         setZhgSettings(s);
         if (s.defaultTelegramDestinationIds?.length) {
           setSelectedDestIds(new Set(s.defaultTelegramDestinationIds));
         } else {
           setSelectedDestIds(new Set(destsLoaded.map((d) => d.dest.id)));
-        }
-        if (s.defaultSixgateGroupId) {
-          setSelectedGroupId(s.defaultSixgateGroupId);
         }
       }).catch(() => {
         setSelectedDestIds(new Set(destsLoaded.map((d) => d.dest.id)));
@@ -270,8 +241,7 @@ export function CreateZhihugenRenderPage() {
         blocks: blocks.filter((b) => b.text.trim()),
         title: title.trim(),
         caption: caption.trim() || undefined,
-        destinationIds: [...selectedDestIds],
-        sixgateGroupId: selectedGroupId || undefined,
+        telegramDestinations: [...selectedDestIds],
         previewBeforeUpload,
       };
       const result = await zhihugenClient.render(body);
@@ -359,10 +329,10 @@ export function CreateZhihugenRenderPage() {
           </button>
         </div>
 
-        {/* Delivery options */}
-        {(telegramDests.length > 0 || sixgateGroups.length > 0) && (
+        {/* Telegram delivery */}
+        {telegramDests.length > 0 && (
           <div className="zhg-delivery">
-            <span className="zhg-delivery-label">Deliver to</span>
+            <span className="zhg-delivery-label">Telegram</span>
             <div className="zhg-delivery-options">
               {telegramDests.map(({ dest }) => (
                 <label key={dest.id} className="zhg-chip">
@@ -370,14 +340,6 @@ export function CreateZhihugenRenderPage() {
                   <span>{dest.name}</span>
                 </label>
               ))}
-              {sixgateGroups.length > 0 && (
-                <select className="zhg-delivery-select" value={selectedGroupId} onChange={(e) => setSelectedGroupId(e.target.value)}>
-                  <option value="">6Gate: None</option>
-                  {sixgateGroups.map((g) => (
-                    <option key={g.id} value={g.id}>6Gate: {g.name}</option>
-                  ))}
-                </select>
-              )}
             </div>
           </div>
         )}
@@ -441,7 +403,6 @@ export function CreateZhihugenRenderPage() {
         open={showSettings}
         settings={zhgSettings}
         telegramDests={telegramDests}
-        sixgateGroups={sixgateGroups}
         onSave={handleSaveSettings}
         onClose={() => setShowSettings(false)}
       />

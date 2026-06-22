@@ -29,7 +29,7 @@ export async function createServer(container: AppContainer) {
     if (!request.url.startsWith("/api/")) return;
     if (request.url === "/api/auth/login" || request.url === "/api/health") return;
 
-    if (!container.verifyAdminAccessTokenUseCase.execute(request.headers.authorization)) {
+    if (!await container.verifyAdminAccessTokenUseCase.execute(request.headers.authorization)) {
       return reply.code(401).send(apiError(401, "Unauthorized", "Missing or invalid bearer token."));
     }
   });

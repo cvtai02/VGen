@@ -3,12 +3,19 @@ export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost
 export interface TtsSettings {
   baseUrl: string;
   apiKey: string;
+  provider: "elevenlabs" | "soniox" | string;
+  voiceModel: string;
   hasApiKey?: boolean;
 }
 
+export interface StorageSettings {
+  baseUrl: string;
+  accessToken: string;
+  hasAccessToken?: boolean;
+  tempUploadExpiresInSeconds: number;
+}
+
 export interface TelegramSettings {
-  enabled: boolean;
-  captionTemplate: string;
   bots: TelegramBot[];
 }
 
@@ -18,7 +25,6 @@ export interface TelegramDestination {
   name: string;
   type?: string;
   username?: string;
-  enabled: boolean;
 }
 
 export interface TelegramBot {
@@ -27,7 +33,6 @@ export interface TelegramBot {
   username?: string;
   botToken: string;
   hasBotToken: boolean;
-  enabled: boolean;
   destinations: TelegramDestination[];
 }
 
@@ -40,8 +45,7 @@ export interface ZhihugenRenderRequest {
   blocks: TextBlock[];
   title: string;
   caption?: string;
-  destinationIds?: string[];
-  sixgateGroupId?: string;
+  telegramDestinations?: string[];
   previewBeforeUpload?: boolean;
 }
 
@@ -89,7 +93,6 @@ export interface ZhihugenSettings {
   defaultResolution: string;
   defaultTtsModel: string;
   defaultTelegramDestinationIds: string[];
-  defaultSixgateGroupId: string;
 }
 
 interface LoginResponse {
@@ -180,11 +183,43 @@ export const zhihugenClient = {
     apiFetch<{ absolutePath: string; cdnUrl?: string }>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/confirm-upload`, { method: "POST" }),
   discardJob: (id: string) =>
     apiFetch<{ status: string }>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/discard`, { method: "POST" }),
+  resendJob: (id: string) =>
+    apiFetch<ZhihugenJobDto>(`/api/zhihugen/jobs/${encodeURIComponent(id)}/resend`, { method: "POST" }),
 
   listTtsModels: () => apiFetch<{ models: TtsModel[]; defaultModelId: string }>("/api/tts/models"),
 };
 
+export interface TtsProvider {
+  id: string;
+  label: string;
+  model: string;
+  blurb: string;
+  connectionCount: number;
+  connected: boolean;
+}
+
+export interface TtsVoiceModel {
+  id: string;
+  name: string;
+  language: string;
+  gender: string;
+}
+
+export const ttsClient = {
+  getProviders: () => apiFetch<{ providers: TtsProvider[] }>("/api/tts/providers"),
+  getVoiceModels: (provider: string) =>
+    apiFetch<{ voiceModels: TtsVoiceModel[]; languages: string[] }>(`/api/tts/voice-models?provider=${encodeURIComponent(provider)}`),
+};
+
 export const settingsClient = {
+  getStorage: () => apiFetch<StorageSettings>("/api/settings/storage"),
+  updateStorage: (body: Partial<StorageSettings>) =>
+    apiFetch<StorageSettings>("/api/settings/storage", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }),
+
   getTts: () => apiFetch<TtsSettings>("/api/settings/tts"),
   updateTts: (body: Partial<TtsSettings>) =>
     apiFetch<TtsSettings>("/api/settings/tts", {
@@ -194,12 +229,6 @@ export const settingsClient = {
     }),
 
   getTelegram: () => apiFetch<TelegramSettings>("/api/settings/telegram"),
-  updateTelegram: (body: Partial<TelegramSettings>) =>
-    apiFetch<TelegramSettings>("/api/settings/telegram", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body)
-    }),
 
   getZhihugen: () => apiFetch<ZhihugenSettings>("/api/features/zhihugen/settings"),
   updateZhihugen: (body: Partial<ZhihugenSettings>) =>
@@ -211,13 +240,13 @@ export const settingsClient = {
 };
 
 export const telegramClient = {
-  addBot: (body: { name?: string; botToken: string; chatId?: string; chatName?: string }) =>
+  addBot: (body: { botToken: string; chatId?: string; chatName?: string }) =>
     apiFetch<TelegramBot>("/api/telegram/bots", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
     }),
-  updateBot: (botId: string, body: { name?: string; botToken?: string; enabled?: boolean }) =>
+  updateBot: (botId: string, body: { name?: string; botToken?: string }) =>
     apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -236,7 +265,7 @@ export const telegramClient = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
     }),
-  updateDestination: (botId: string, destinationId: string, body: { name?: string; enabled?: boolean }) =>
+  updateDestination: (botId: string, destinationId: string, body: { name?: string }) =>
     apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}/destinations/${encodeURIComponent(destinationId)}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -244,19 +273,4 @@ export const telegramClient = {
     }),
   deleteDestination: (botId: string, destinationId: string) =>
     apiFetch<TelegramBot>(`/api/telegram/bots/${encodeURIComponent(botId)}/destinations/${encodeURIComponent(destinationId)}`, { method: "DELETE" }),
-};
-
-export interface SixGateGroup {
-  id: string;
-  name: string;
-}
-
-const SIXGATE_BASE_URL = import.meta.env.VITE_SIXGATE_BASE_URL ?? "http://localhost:20130";
-
-export const sixgateClient = {
-  listGroups: async (): Promise<SixGateGroup[]> => {
-    const res = await fetch(`${SIXGATE_BASE_URL}/api/groups`);
-    if (!res.ok) return [];
-    return res.json();
-  },
 };

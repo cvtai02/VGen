@@ -38,8 +38,6 @@ type TelegramUpdate = {
 
 export function redactTelegramSettings(settings: TelegramSettings): TelegramSettingsResponseDto {
   return {
-    enabled: settings.enabled,
-    captionTemplate: settings.captionTemplate,
     bots: settings.bots.map(redactBot)
   };
 }
@@ -73,14 +71,13 @@ export async function telegramRequest<T>(botToken: string, method: string, body?
   return data.result;
 }
 
-export function createBot(input: { name?: string; botToken: string; bot?: TelegramBotInfo; enabled?: boolean }): TelegramBotSettings {
+export function createBot(input: { name?: string; botToken: string; bot?: TelegramBotInfo }): TelegramBotSettings {
   const name = input.name?.trim() || input.bot?.first_name || input.bot?.username || "Telegram Bot";
   return {
     id: `tg_bot_${randomUUID()}`,
     name,
     username: input.bot?.username,
     botToken: input.botToken.trim(),
-    enabled: input.enabled ?? true,
     destinations: []
   };
 }
@@ -92,8 +89,7 @@ export function createDestination(chat: TelegramChatInfo, preferredName?: string
     chatId,
     name: getChatDisplayName(chat, preferredName),
     type: chat.type,
-    username: chat.username,
-    enabled: true
+    username: chat.username
   };
 }
 

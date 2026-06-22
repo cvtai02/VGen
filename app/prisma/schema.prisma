@@ -13,6 +13,11 @@ model SystemSettings {
   updatedAt    DateTime @updatedAt
 }
 
+model AdminToken {
+  token     String   @id
+  createdAt DateTime @default(now())
+}
+
 model RenderJob {
   id           String    @id
   type         String

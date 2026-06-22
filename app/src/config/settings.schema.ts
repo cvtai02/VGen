@@ -1,11 +1,13 @@
 import { z } from "zod";
 
-export const defaultTelegramCaptionTemplate = "{label}\n\n{cdnUrl}";
-
 export const defaultTelegramSettings = {
-  enabled: false,
-  captionTemplate: defaultTelegramCaptionTemplate,
   bots: []
+};
+
+export const defaultStorageSettings = {
+  baseUrl: "https://7router-api.minfect.com",
+  accessToken: "",
+  tempUploadExpiresInSeconds: 900
 };
 
 const telegramDestinationSchema = z.object({
@@ -13,8 +15,7 @@ const telegramDestinationSchema = z.object({
   chatId: z.string(),
   name: z.string(),
   type: z.string().optional(),
-  username: z.string().optional(),
-  enabled: z.boolean().default(true)
+  username: z.string().optional()
 });
 
 const telegramBotSchema = z.object({
@@ -22,36 +23,29 @@ const telegramBotSchema = z.object({
   name: z.string(),
   username: z.string().optional(),
   botToken: z.string(),
-  enabled: z.boolean().default(true),
   destinations: z.array(telegramDestinationSchema).default([])
 });
 
 const telegramSettingsSchema = z.preprocess((value) => {
   if (!value || typeof value !== "object") return defaultTelegramSettings;
   const raw = value as Record<string, unknown>;
-  if (Array.isArray(raw.bots)) return raw;
+  if (Array.isArray(raw.bots)) return { bots: raw.bots };
 
   const botToken = typeof raw.botToken === "string" ? raw.botToken : "";
   const chatId = typeof raw.chatId === "string" ? raw.chatId : "";
-  const captionTemplate = typeof raw.captionTemplate === "string" ? raw.captionTemplate : defaultTelegramCaptionTemplate;
   return {
-    enabled: typeof raw.enabled === "boolean" ? raw.enabled : false,
-    captionTemplate,
     bots: botToken || chatId
       ? [{
         id: "legacy-telegram-bot",
         name: "Telegram Bot",
         botToken,
-        enabled: true,
         destinations: chatId
-          ? [{ id: "legacy-telegram-chat", chatId, name: chatId, enabled: true }]
+          ? [{ id: "legacy-telegram-chat", chatId, name: chatId }]
           : []
       }]
       : []
   };
 }, z.object({
-  enabled: z.boolean(),
-  captionTemplate: z.string(),
   bots: z.array(telegramBotSchema).default([])
 }));
 
@@ -70,8 +64,15 @@ export const runtimeSettingsSchema = z.object({
   }),
   tts: z.object({
     baseUrl: z.string(),
-    apiKey: z.string()
+    apiKey: z.string(),
+    provider: z.string().default("elevenlabs"),
+    voiceModel: z.string().default("")
   }),
+  storage: z.object({
+    baseUrl: z.string(),
+    accessToken: z.string(),
+    tempUploadExpiresInSeconds: z.number().int().positive().default(900)
+  }).default(defaultStorageSettings),
   telegram: telegramSettingsSchema.default(defaultTelegramSettings),
   mediaSource: z.object({
     provider: z.enum(["mock", "internal-api"]),
@@ -106,9 +107,12 @@ export const defaultSettings: RuntimeSettings = {
     concurrency: 1
   },
   tts: {
-    baseUrl: "",
-    apiKey: ""
+    baseUrl: "https://meddler.minfect.com",
+    apiKey: "",
+    provider: "elevenlabs",
+    voiceModel: ""
   },
+  storage: { ...defaultStorageSettings },
   telegram: { ...defaultTelegramSettings },
   mediaSource: {
     provider: "mock",

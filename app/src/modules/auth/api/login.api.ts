@@ -8,7 +8,7 @@ export async function registerLoginApi(app: FastifyInstance, container: AppConta
   app.post<{ Body: LoginRequestDto; Reply: LoginResponseDto | { statusCode: number; error: string; message: string } }>(
     "/api/auth/login",
     async (request, reply) => {
-      const token = container.createAdminAccessTokenUseCase.execute(request.body?.systemSecret ?? "");
+      const token = await container.createAdminAccessTokenUseCase.execute(request.body?.systemSecret ?? "");
       if (!token) {
         return reply.code(401).send(apiError(401, "Unauthorized", "Invalid system secret."));
       }

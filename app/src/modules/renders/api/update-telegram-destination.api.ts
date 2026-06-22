@@ -14,7 +14,6 @@ export async function registerUpdateTelegramDestinationApi(app: FastifyInstance,
         const destination = bot.destinations.find((item) => item.id === request.params.destinationId);
         if (!destination) return reply.code(404).send(apiError(404, "Not Found", "Telegram destination not found."));
         if (request.body?.name !== undefined) destination.name = request.body.name.trim() || destination.name;
-        if (request.body?.enabled !== undefined) destination.enabled = request.body.enabled;
         await saveTelegramSettings(container, container.settings.telegram);
         return redactBot(bot);
       } catch (error) {

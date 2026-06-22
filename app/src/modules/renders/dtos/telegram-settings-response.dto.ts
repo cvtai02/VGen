@@ -4,7 +4,6 @@ export interface TelegramDestinationDto {
   name: string;
   type?: string;
   username?: string;
-  enabled: boolean;
 }
 
 export interface TelegramBotDto {
@@ -13,12 +12,9 @@ export interface TelegramBotDto {
   username?: string;
   botToken: string;
   hasBotToken: boolean;
-  enabled: boolean;
   destinations: TelegramDestinationDto[];
 }
 
 export interface TelegramSettingsResponseDto {
-  enabled: boolean;
-  captionTemplate: string;
   bots: TelegramBotDto[];
 }

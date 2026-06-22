@@ -39,6 +39,6 @@ pnpm dev
 
 The API listens on `http://localhost:3000` by default. The UI listens on `http://localhost:5200`.
 
-Telegram delivery is configured from the admin UI Telegram page. It supports multiple bot tokens, multiple chat destinations per bot, manual destination add/remove, chat sync from Telegram updates, and automatic upload of completed generated videos to all enabled destinations.
+Telegram delivery is configured from the admin UI Telegram page. It supports multiple bot tokens, multiple chat destinations per bot, manual destination add/remove, chat sync from Telegram updates, and automatic delivery of completed generated videos to all configured destinations.
 
 Agents must read this file and `rules.md` before editing code. Inside `app/` or `ui/`, also read the nearest `index.md` and `rules.md`.

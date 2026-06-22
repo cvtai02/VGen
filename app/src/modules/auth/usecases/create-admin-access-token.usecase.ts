@@ -1,16 +1,17 @@
 import { randomUUID } from "node:crypto";
+import type { PrismaClient } from "@prisma/client";
 
 export class CreateAdminAccessTokenUseCase {
   constructor(
     private readonly systemSecret: string,
-    private readonly issuedTokens: Set<string>
+    private readonly prisma: PrismaClient
   ) {}
 
-  execute(systemSecret: string): string | null {
+  async execute(systemSecret: string): Promise<string | null> {
     if (systemSecret !== this.systemSecret) return null;
 
     const token = randomUUID();
-    this.issuedTokens.add(token);
+    await this.prisma.adminToken.create({ data: { token } });
     return token;
   }
 }

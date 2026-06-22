@@ -4,7 +4,6 @@ import { settingsClient, telegramClient, type TelegramBot, type TelegramSettings
 
 
 function AddBotModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
-  const [name, setName] = useState("Telegram Bot");
   const [botToken, setBotToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -14,7 +13,7 @@ function AddBotModal({ onClose, onAdded }: { onClose: () => void; onAdded: () =>
     setSubmitting(true);
     setError("");
     try {
-      await telegramClient.addBot({ name: name.trim() || "Telegram Bot", botToken });
+      await telegramClient.addBot({ botToken });
       onAdded();
       onClose();
     } catch (err) {
@@ -33,10 +32,6 @@ function AddBotModal({ onClose, onAdded }: { onClose: () => void; onAdded: () =>
         </div>
         <form onSubmit={handleSubmit} className="modal-body">
           {error && <div className="settings-error">{error}</div>}
-          <div className="form-group">
-            <label className="form-label">Bot Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="My Bot" />
-          </div>
           <div className="form-group">
             <label className="form-label">Bot Token</label>
             <input
@@ -94,11 +89,6 @@ function BotCard({ bot, onRefresh }: { bot: TelegramBot; onRefresh: () => void }
     }
   }
 
-  async function toggleDestination(destId: string, enabled: boolean) {
-    await telegramClient.updateDestination(bot.id, destId, { enabled });
-    onRefresh();
-  }
-
   async function deleteDestination(destId: string) {
     await telegramClient.deleteDestination(bot.id, destId);
     onRefresh();
@@ -136,15 +126,10 @@ function BotCard({ bot, onRefresh }: { bot: TelegramBot; onRefresh: () => void }
           <div className="destination-list-header">Destinations</div>
           {bot.destinations.map((dest) => (
             <div key={dest.id} className="destination-row">
-              <label className="destination-toggle">
-                <input
-                  type="checkbox"
-                  checked={dest.enabled}
-                  onChange={(e) => toggleDestination(dest.id, e.target.checked)}
-                />
+              <div className="destination-info">
                 <span className="destination-name">{dest.name}</span>
                 <span className="destination-meta">{dest.type} &middot; {dest.chatId}</span>
-              </label>
+              </div>
               <button className="btn btn-ghost btn-icon btn-xs" onClick={() => deleteDestination(dest.id)} title="Remove">
                 <Trash2 size={11} />
               </button>
@@ -181,15 +166,6 @@ export function TelegramPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function toggleEnabled(enabled: boolean) {
-    try {
-      const s = await settingsClient.updateTelegram({ enabled });
-      setSettings(s);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update");
-    }
-  }
-
   if (loading) {
     return (
       <section className="panel">
@@ -210,10 +186,6 @@ export function TelegramPage() {
       <div className="page-header">
         <h1 className="page-title">Telegram</h1>
         <div className="page-header-actions">
-          <label className="toggle-label">
-            <input type="checkbox" checked={settings?.enabled ?? false} onChange={(e) => toggleEnabled(e.target.checked)} />
-            <span>Enabled</span>
-          </label>
           <button className="btn btn-primary btn-sm" onClick={() => setShowAddBot(true)}>
             <Plus size={13} /> Add Bot
           </button>
@@ -227,7 +199,7 @@ export function TelegramPage() {
         <ol className="info-box-steps">
           <li>Create a bot with <strong>@BotFather</strong> on Telegram and copy the token.</li>
           <li>Add the bot to your group/channel, then click <strong>Sync Chats</strong>.</li>
-          <li>Enable the destinations you want. In <strong>Zhihugen</strong>, select which chats to send to.</li>
+          <li>In <strong>Zhihugen</strong>, select which chats to send to.</li>
         </ol>
       </div>
 

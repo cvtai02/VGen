@@ -14,7 +14,6 @@ export async function registerUpdateTelegramBotApi(app: FastifyInstance, contain
       try {
         const bot = findBotOrThrow(container.settings.telegram, request.params.botId);
         if (request.body?.name !== undefined) bot.name = request.body.name.trim() || bot.name;
-        if (request.body?.enabled !== undefined) bot.enabled = request.body.enabled;
         if (request.body?.botToken !== undefined && request.body.botToken !== MASKED_SECRET) {
           const nextToken = request.body.botToken.trim();
           if (!nextToken) return reply.code(400).send(apiError(400, "Bad Request", "botToken cannot be empty."));

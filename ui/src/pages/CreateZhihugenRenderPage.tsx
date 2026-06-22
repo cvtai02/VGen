@@ -92,15 +92,19 @@ function ZhihugenSettingsDialog({
   onSave: (s: Partial<ZhihugenSettings>) => Promise<void>;
   onClose: () => void;
 }) {
+  const [outputDir, setOutputDir] = useState("");
   const [bgVideo, setBgVideo] = useState("");
   const [bgMusic, setBgMusic] = useState("");
+  const [ttsModel, setTtsModel] = useState("");
   const [selDestIds, setSelDestIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!settings) return;
+    setOutputDir(settings.defaultOutputDirectory ?? "");
     setBgVideo(settings.defaultBackgroundVideoPath);
     setBgMusic(settings.defaultBackgroundMusicPath ?? "");
+    setTtsModel(settings.defaultTtsModel ?? "");
     setSelDestIds(new Set(settings.defaultTelegramDestinationIds ?? []));
   }, [settings]);
 
@@ -114,8 +118,10 @@ function ZhihugenSettingsDialog({
     setSaving(true);
     try {
       await onSave({
+        defaultOutputDirectory: outputDir.trim(),
         defaultBackgroundVideoPath: bgVideo.trim(),
         defaultBackgroundMusicPath: bgMusic.trim(),
+        defaultTtsModel: ttsModel.trim(),
         defaultTelegramDestinationIds: [...selDestIds],
       });
       onClose();
@@ -133,12 +139,20 @@ function ZhihugenSettingsDialog({
         </div>
         <div className="modal-body">
           <div className="form-group">
+            <label className="form-label">Output Directory</label>
+            <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} placeholder="CloudflareR2/my-account/my-bucket/videos" className="font-mono" />
+          </div>
+          <div className="form-group">
             <label className="form-label">Background Video Path</label>
             <input type="text" value={bgVideo} onChange={(e) => setBgVideo(e.target.value)} placeholder="./media/background.mp4 or https://..." className="font-mono" />
           </div>
           <div className="form-group">
             <label className="form-label">Background Music Path</label>
             <input type="text" value={bgMusic} onChange={(e) => setBgMusic(e.target.value)} placeholder="./media/music.mp3 (optional)" className="font-mono" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">TTS Model</label>
+            <input type="text" value={ttsModel} onChange={(e) => setTtsModel(e.target.value)} placeholder="edge-tts/vi-VN-HoaiMyNeural" className="font-mono" />
           </div>
           {telegramDests.length > 0 && (
             <div className="form-group">

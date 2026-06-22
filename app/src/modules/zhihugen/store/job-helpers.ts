@@ -77,7 +77,8 @@ export interface ZhihugenJobResult {
 }
 
 export function buildTelegramCaption(title: string, caption: string, absolutePath: string): string {
-  const viewUrl = `https://7router.vercel.app/view/${absolutePath}`;
+  const encodedPath = absolutePath.split("/").map(s => encodeURIComponent(s)).join("/");
+  const viewUrl = `https://7router.vercel.app/view/${encodedPath}`;
   return `/queue\n@7router: ${absolutePath}\n@title: ${title}\n@caption: ${caption}\n\n${viewUrl}`;
 }
 

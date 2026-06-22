@@ -40,7 +40,7 @@ const STATUS_STYLE: Record<StepStatus, { border: string; bg: string; text: strin
   failed:    { border: "rgba(239,68,68,0.4)",     bg: "rgba(239,68,68,0.05)", text: "var(--error)",   dot: "var(--error)",        icon: "var(--error)" },
 };
 
-function deriveStepMap(events: JobEvent[]): Record<string, StepState> {
+function deriveStepMap(events: JobEvent[], jobStatus: string): Record<string, StepState> {
   const raw = new Map<string, { started?: string; completed?: string; failed?: string; metadata?: Record<string, unknown> }>();
   for (const e of events) {
     const entry = raw.get(e.step) ?? {};
@@ -50,14 +50,18 @@ function deriveStepMap(events: JobEvent[]): Record<string, StepState> {
     raw.set(e.step, entry);
   }
 
+  const jobDone = jobStatus === "completed";
   const result: Record<string, StepState> = {};
   for (const key of ALL_STEPS) {
     const entry = raw.get(key);
-    if (!entry) { result[key] = { status: "pending" }; continue; }
+    if (!entry) {
+      result[key] = { status: jobDone ? "completed" : "pending" };
+      continue;
+    }
     if (entry.failed) result[key] = { status: "failed", time: entry.failed, startedAt: entry.started, completedAt: entry.failed };
     else if (entry.completed) result[key] = { status: "completed", time: entry.completed, startedAt: entry.started, completedAt: entry.completed, metadata: entry.metadata };
     else if (entry.started) result[key] = { status: "running", time: entry.started, startedAt: entry.started };
-    else result[key] = { status: "pending" };
+    else result[key] = { status: jobDone ? "completed" : "pending" };
   }
   return result;
 }
@@ -189,7 +193,7 @@ function PipelineProgress({ jobId, jobStatus, absolutePath, telegram }: { jobId:
     return () => { active = false; if (interval) clearInterval(interval); };
   }, [jobId, jobStatus]);
 
-  const s = deriveStepMap(events);
+  const s = deriveStepMap(events, jobStatus);
 
   useEffect(() => {
     const container = containerRef.current;

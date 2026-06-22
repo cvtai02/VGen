@@ -1,13 +1,15 @@
-import { BookOpen, KeyRound, ListVideo, Loader, LogOut, Send, Video, Layers, Settings } from "lucide-react";
+import { BookOpen, HardDrive, KeyRound, ListVideo, Loader, LogOut, Mic2, Send, Video, Layers, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { authClient, authExpiredEventName, clearAuthToken, getAuthToken, setAuthToken } from "./api/clients.js";
 import { CreateZhihugenRenderPage } from "./pages/CreateZhihugenRenderPage.js";
+import { MeddlerSettingsPage } from "./pages/MeddlerSettingsPage.js";
 import { RenderJobsPage } from "./pages/RenderJobsPage.js";
+import { SevenRouterPage } from "./pages/SevenRouterPage.js";
 import { SettingsPage } from "./pages/SettingsPage.js";
 import { TelegramPage } from "./pages/TelegramPage.js";
 import { UsecasesPage } from "./pages/UsecasesPage.js";
 
-type Page = "zhihugen" | "jobs" | "settings" | "usecases" | "telegram";
+type Page = "zhihugen" | "jobs" | "settings" | "usecases" | "telegram" | "meddler" | "7router";
 
 export function App() {
   const [page, setPage] = useState<Page>("jobs");
@@ -92,6 +94,12 @@ export function App() {
           <button className={page === "telegram" ? "active" : ""} onClick={() => setPage("telegram")}>
             <Send size={16} className="nav-icon" /><span className="nav-label">Telegram</span>
           </button>
+          <button className={page === "meddler" ? "active" : ""} onClick={() => setPage("meddler")}>
+            <Mic2 size={16} className="nav-icon" /><span className="nav-label">Meddler</span>
+          </button>
+          <button className={page === "7router" ? "active" : ""} onClick={() => setPage("7router")}>
+            <HardDrive size={16} className="nav-icon" /><span className="nav-label">7router</span>
+          </button>
           <button className={page === "usecases" ? "active" : ""} onClick={() => setPage("usecases")}>
             <BookOpen size={16} className="nav-icon" /><span className="nav-label">Usecases</span>
           </button>
@@ -106,6 +114,8 @@ export function App() {
       {page === "jobs" && <RenderJobsPage />}
       {page === "zhihugen" && <CreateZhihugenRenderPage />}
       {page === "telegram" && <TelegramPage />}
+      {page === "meddler" && <MeddlerSettingsPage />}
+      {page === "7router" && <SevenRouterPage />}
       {page === "usecases" && <UsecasesPage />}
       {page === "settings" && <SettingsPage />}
     </main>

@@ -1,6 +1,6 @@
 import { Loader, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { settingsClient, type TtsSettings, type ZhihugenSettings } from "../api/clients.js";
+import { settingsClient, type ZhihugenSettings } from "../api/clients.js";
 
 const defaultZhihugen: ZhihugenSettings = {
   defaultOutputDirectory: "",
@@ -11,27 +11,18 @@ const defaultZhihugen: ZhihugenSettings = {
   defaultResolution: "1080x1920",
   defaultTtsModel: "",
   defaultTelegramDestinationIds: [],
-  defaultSixgateGroupId: "",
 };
 
 export function SettingsPage() {
-  const [tts, setTts] = useState<TtsSettings>({ baseUrl: "", apiKey: "" });
   const [zhihugen, setZhihugen] = useState<ZhihugenSettings>(defaultZhihugen);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const [ttsKeyDirty, setTtsKeyDirty] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      settingsClient.getTts(),
-      settingsClient.getZhihugen(),
-    ])
-      .then(([t, z]) => {
-        setTts({ baseUrl: t.baseUrl, apiKey: "" });
-        setZhihugen(z);
-      })
+    settingsClient.getZhihugen()
+      .then((z) => setZhihugen(z))
       .catch(() => setError("Failed to load settings."))
       .finally(() => setLoading(false));
   }, []);
@@ -41,16 +32,8 @@ export function SettingsPage() {
     setSaved(false);
     setSaving(true);
     try {
-      const ttsPayload: Partial<TtsSettings> = { baseUrl: tts.baseUrl };
-      if (ttsKeyDirty) ttsPayload.apiKey = tts.apiKey;
-
-      const [t, z] = await Promise.all([
-        settingsClient.updateTts(ttsPayload),
-        settingsClient.updateZhihugen(zhihugen),
-      ]);
-      setTts({ baseUrl: t.baseUrl, apiKey: "" });
-      setZhihugen(z);
-      setTtsKeyDirty(false);
+      const updated = await settingsClient.updateZhihugen(zhihugen);
+      setZhihugen(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
@@ -71,36 +54,14 @@ export function SettingsPage() {
 
       {!loading && (
         <>
-          <div className="settings-section-title">TTS (9router)</div>
-
-          <div className="form-group">
-            <label className="form-label">Base URL</label>
-            <input
-              type="text"
-              value={tts.baseUrl}
-              placeholder="http://localhost:9000"
-              onChange={(e) => setTts((t) => ({ ...t, baseUrl: e.target.value }))}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">API key</label>
-            <input
-              type="password"
-              value={tts.apiKey}
-              placeholder="********  (leave blank to keep current)"
-              onChange={(e) => { setTtsKeyDirty(true); setTts((t) => ({ ...t, apiKey: e.target.value })); }}
-            />
-          </div>
-
-          <div className="settings-section-title" style={{ marginTop: "1.5rem" }}>Zhihugen</div>
+          <div className="settings-section-title">Zhihugen</div>
 
           <div className="form-group">
             <label className="form-label">Default output directory</label>
             <input
               type="text"
               value={zhihugen.defaultOutputDirectory}
-              placeholder="./tmp/renders"
+              placeholder="CloudflareR2/my-account/my-bucket/videos"
               onChange={(e) => setZhihugen((z) => ({ ...z, defaultOutputDirectory: e.target.value }))}
             />
           </div>

@@ -2,10 +2,11 @@ import { Plus, Trash2, Loader, Copy, Upload, X, Settings, GripVertical, Send } f
 import { useEffect, useState } from "react";
 import {
   settingsClient,
+  ttsClient,
   zhihugenClient,
   type TelegramDestination,
   type TextBlock,
-  type TtsModel,
+  type TtsVoiceModel,
   type ZhihugenRenderRequest,
   type ZhihugenSettings,
 } from "../api/clients.js";
@@ -84,14 +85,14 @@ function ZhihugenSettingsDialog({
   open,
   settings,
   telegramDests,
-  ttsModels,
+  voiceModels,
   onSave,
   onClose,
 }: {
   open: boolean;
   settings: ZhihugenSettings | null;
   telegramDests: { botId: string; botName: string; dest: TelegramDestination }[];
-  ttsModels: TtsModel[];
+  voiceModels: TtsVoiceModel[];
   onSave: (s: Partial<ZhihugenSettings>) => Promise<void>;
   onClose: () => void;
 }) {
@@ -154,16 +155,16 @@ function ZhihugenSettingsDialog({
             <input type="text" value={bgMusic} onChange={(e) => setBgMusic(e.target.value)} placeholder="./media/music.mp3 (optional)" className="font-mono" />
           </div>
           <div className="form-group">
-            <label className="form-label">TTS Model</label>
-            {ttsModels.length > 0 ? (
+            <label className="form-label">TTS Voice</label>
+            {voiceModels.length > 0 ? (
               <select value={ttsModel} onChange={(e) => setTtsModel(e.target.value)}>
                 <option value="">— Select —</option>
-                {ttsModels.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name} ({m.provider})</option>
+                {voiceModels.map((vm) => (
+                  <option key={vm.id} value={vm.id}>{vm.name} ({vm.language}, {vm.gender})</option>
                 ))}
               </select>
             ) : (
-              <input type="text" value={ttsModel} onChange={(e) => setTtsModel(e.target.value)} placeholder="edge-tts/vi-VN-HoaiMyNeural" className="font-mono" />
+              <input type="text" value={ttsModel} onChange={(e) => setTtsModel(e.target.value)} placeholder="voice model id" className="font-mono" />
             )}
           </div>
           {telegramDests.length > 0 && (
@@ -210,11 +211,12 @@ export function CreateZhihugenRenderPage() {
 
   const [zhgSettings, setZhgSettings] = useState<ZhihugenSettings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [ttsModels, setTtsModels] = useState<TtsModel[]>([]);
+  const [voiceModels, setVoiceModels] = useState<TtsVoiceModel[]>([]);
 
   useEffect(() => {
-    zhihugenClient.listTtsModels()
-      .then((data) => setTtsModels(data.models))
+    settingsClient.getTts()
+      .then((tts) => ttsClient.getVoiceModels(tts.provider))
+      .then((data) => setVoiceModels(data.voiceModels))
       .catch(() => {});
   }, []);
 
@@ -436,7 +438,7 @@ export function CreateZhihugenRenderPage() {
         open={showSettings}
         settings={zhgSettings}
         telegramDests={telegramDests}
-        ttsModels={ttsModels}
+        voiceModels={voiceModels}
         onSave={handleSaveSettings}
         onClose={() => setShowSettings(false)}
       />

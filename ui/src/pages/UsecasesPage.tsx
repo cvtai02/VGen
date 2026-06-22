@@ -1,4 +1,4 @@
-import { BookOpen, CheckCircle2, Clock3, Code2, FileImage, LockKeyhole, UploadCloud, Send, RefreshCw } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock3, Code2, FileImage, LockKeyhole, UploadCloud, Send, RefreshCw, Users } from "lucide-react";
 import { apiBaseUrl } from "../api/clients.js";
 import "../styles/usecases.css";
 
@@ -55,6 +55,29 @@ const jobResponseCode = `// GET /api/zhihugen/jobs/:id
   "cdnUrl": "https://...",
   "telegram": [
     { "provider": "telegram", "status": "sent", "botName": "...", "link": "..." }
+  ]
+}`;
+
+const telegramDestinationsCode = `GET /api/settings/telegram`;
+
+const telegramDestinationsResponseCode = `// GET /api/settings/telegram
+{
+  "bots": [
+    {
+      "id": "tg_bot_...",
+      "name": "My Bot",
+      "username": "my_bot",
+      "hasBotToken": true,
+      "destinations": [
+        {
+          "id": "tg_dest_abc123",
+          "chatId": "-1001234567890",
+          "name": "My Channel",
+          "type": "channel",
+          "username": "my_channel"
+        }
+      ]
+    }
   ]
 }`;
 
@@ -145,6 +168,13 @@ export function UsecasesPage() {
               <p>Direct renders return the storage path immediately. Preview renders return a job ID for the confirm-upload flow.</p>
               <pre>{responseDirectCode}</pre>
               <pre>{responsePreviewCode}</pre>
+            </div>
+
+            <div className="usecase-step">
+              <div className="usecase-step-title"><Users size={15} /> Telegram destinations</div>
+              <p>Fetch configured bots and their destinations. Use a destination <code>id</code> in the <code>telegramDestinations</code> array when creating a render. Omit the array to send to all destinations.</p>
+              <pre>{telegramDestinationsCode}</pre>
+              <pre>{telegramDestinationsResponseCode}</pre>
             </div>
 
             <div className="usecase-step">

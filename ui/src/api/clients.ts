@@ -221,8 +221,19 @@ export const ttsClient = {
     apiFetch<{ voiceModels: TtsVoiceModel[]; languages: string[] }>(`/api/tts/voice-models?provider=${encodeURIComponent(provider)}`),
 };
 
+export interface StorageDirectory {
+  path: string;
+  access: "read" | "read-write";
+}
+
+export interface StorageDirectoriesResponse {
+  isAdmin: boolean;
+  directories: StorageDirectory[];
+}
+
 export const settingsClient = {
   getStorage: () => apiFetch<StorageSettings>("/api/settings/storage"),
+  getStorageDirectories: () => apiFetch<StorageDirectoriesResponse>("/api/settings/storage/directories"),
   updateStorage: (body: Partial<StorageSettings>) =>
     apiFetch<StorageSettings>("/api/settings/storage", {
       method: "POST",

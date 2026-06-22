@@ -4,6 +4,7 @@ import {
   settingsClient,
   ttsClient,
   zhihugenClient,
+  type StorageDirectory,
   type TelegramDestination,
   type TextBlock,
   type TtsProvider,
@@ -110,6 +111,18 @@ function ZhihugenSettingsDialog({
   const [loadingModels, setLoadingModels] = useState(false);
   const [selDestIds, setSelDestIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [directories, setDirectories] = useState<StorageDirectory[]>([]);
+  const [loadingDirs, setLoadingDirs] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoadingDirs(true);
+    settingsClient.getStorageDirectories()
+      .then((data) => { setDirectories(data.directories); setIsAdmin(data.isAdmin); })
+      .catch(() => { setDirectories([]); setIsAdmin(false); })
+      .finally(() => setLoadingDirs(false));
+  }, [open]);
 
   useEffect(() => {
     if (!settings) return;
@@ -166,7 +179,18 @@ function ZhihugenSettingsDialog({
         <div className="modal-body">
           <div className="form-group">
             <label className="form-label">7router Output Path</label>
-            <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} placeholder="CloudflareR2/my-account/my-bucket/videos" className="font-mono" />
+            {loadingDirs ? (
+              <div className="settings-loading"><Loader size={12} className="spin" /> Loading directories...</div>
+            ) : isAdmin || directories.length === 0 ? (
+              <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} placeholder="CloudflareR2/my-account/my-bucket/videos" className="font-mono" />
+            ) : (
+              <select value={outputDir} onChange={(e) => setOutputDir(e.target.value)}>
+                <option value="">— Select directory —</option>
+                {directories.filter((d) => d.access === "read-write").map((d) => (
+                  <option key={d.path} value={d.path}>{d.path}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="form-group">
             <label className="form-label">Background Video Path</label>

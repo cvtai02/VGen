@@ -1,36 +1,88 @@
-import { BookOpen, CheckCircle2, Clock3, Code2, FileImage, LockKeyhole, UploadCloud } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock3, Code2, FileImage, LockKeyhole, UploadCloud, Send, RefreshCw } from "lucide-react";
 import { apiBaseUrl } from "../api/clients.js";
 import "../styles/usecases.css";
 
 const authCode = `Authorization: Bearer <system-token>`;
 
 const renderCode = `POST ${apiBaseUrl}/api/zhihugen/render
-Authorization: Bearer <system-token>
-Content-Type: multipart/form-data
+Content-Type: application/json
 
-images=<file>            repeat for every scene image
-scripts=<text>           repeat to match image order
-label=<video label>`;
+{
+  "blocks": [
+    { "text": "First narration line" },
+    { "text": "Second narration line" }
+  ],
+  "title": "episode-001",
+  "caption": "optional caption text",
+  "telegramDestinations": ["dest-id-1"],
+  "previewBeforeUpload": true
+}`;
 
 const curlCode = `curl -X POST "${apiBaseUrl}/api/zhihugen/render" \\
   -H "Authorization: Bearer <system-token>" \\
-  -F "label=episode-001" \\
-  -F "images=@scene-1.png" \\
-  -F "scripts=First narration line" \\
-  -F "images=@scene-2.png" \\
-  -F "scripts=Second narration line"`;
+  -H "Content-Type: application/json" \\
+  -d '{
+    "blocks": [
+      { "text": "First narration line" },
+      { "text": "Second narration line" }
+    ],
+    "title": "episode-001",
+    "previewBeforeUpload": true
+  }'`;
 
-const responseCode = `Response 200
+const responseDirectCode = `// previewBeforeUpload: false (default)
+200 { "absolutePath": "CloudflareR2/.../video.mp4" }`;
+
+const responsePreviewCode = `// previewBeforeUpload: true
+202 { "jobId": "job_20260622_...", "status": "awaiting_upload" }`;
+
+const jobCode = `GET  /api/zhihugen/jobs                      List jobs (latest 100)
+GET  /api/zhihugen/jobs/:id                  Get single job
+GET  /api/zhihugen/jobs/:id/wait             Long-poll until done (max 5 min)
+GET  /api/zhihugen/jobs/:id/events           Pipeline events (step timings)
+GET  /api/zhihugen/jobs/:id/preview          Stream rendered MP4 (awaiting_upload only)
+POST /api/zhihugen/jobs/:id/confirm-upload   Upload previewed file to storage + telegram
+POST /api/zhihugen/jobs/:id/discard          Discard without uploading
+POST /api/zhihugen/jobs/:id/cancel           Cancel pending or awaiting job
+POST /api/zhihugen/jobs/:id/resend           Resend completed video to Telegram`;
+
+const jobResponseCode = `// GET /api/zhihugen/jobs/:id
 {
-  "absolutePath": "C:/path/to/video.mp4"
+  "jobId": "job_20260622_...",
+  "status": "completed",
+  "label": "episode-001",
+  "absolutePath": "CloudflareR2/.../video.mp4",
+  "cdnUrl": "https://...",
+  "telegram": [
+    { "provider": "telegram", "status": "sent", "botName": "...", "link": "..." }
+  ]
 }`;
 
-const jobCode = `GET  ${apiBaseUrl}/api/zhihugen/jobs
-GET  ${apiBaseUrl}/api/zhihugen/jobs/:id
-GET  ${apiBaseUrl}/api/zhihugen/jobs/:id/wait
-GET  ${apiBaseUrl}/api/zhihugen/jobs/:id/preview
-POST ${apiBaseUrl}/api/zhihugen/jobs/:id/confirm-upload
-POST ${apiBaseUrl}/api/zhihugen/jobs/:id/discard`;
+const eventsResponseCode = `// GET /api/zhihugen/jobs/:id/events
+[
+  { "step": "images_generation", "status": "completed", "createdAt": "..." },
+  { "step": "download_resources", "status": "completed", "metadata": { "cacheHit": true } },
+  { "step": "tts", "status": "completed", "createdAt": "..." },
+  { "step": "rendering", "status": "completed", "createdAt": "..." },
+  { "step": "upload", "status": "completed", "metadata": { "absolutePath": "..." } },
+  { "step": "telegram", "status": "completed", "createdAt": "..." }
+]`;
+
+const renderFieldsTable = [
+  { field: "blocks", type: "TextBlock[]", required: true, desc: "Array of { text, author? }. One block per scene." },
+  { field: "title", type: "string", required: true, desc: "Video title, also used as the job label." },
+  { field: "caption", type: "string", required: false, desc: "Caption text included in Telegram delivery." },
+  { field: "telegramDestinations", type: "string[]", required: false, desc: "Destination IDs to send to. Omit for all configured destinations." },
+  { field: "previewBeforeUpload", type: "boolean", required: false, desc: "When true, returns 202 and waits for confirm-upload. Default: false." },
+];
+
+const pipelineSteps = [
+  { step: "images_generation", desc: "Render text blocks to thread images" },
+  { step: "tts + download_resources", desc: "Text-to-speech and background video download run in parallel" },
+  { step: "rendering", desc: "FFmpeg compositing into final MP4" },
+  { step: "upload", desc: "Upload to 7router storage (skipped until confirm-upload for preview jobs)" },
+  { step: "telegram", desc: "Deliver caption + routing info to Telegram destinations" },
+];
 
 export function UsecasesPage() {
   return (
@@ -38,7 +90,7 @@ export function UsecasesPage() {
       <header className="page-header usecases-header">
         <div>
           <h1 className="page-title">Usecases</h1>
-          <p className="page-subtitle">API notes for external applications that call VGen.</p>
+          <p className="page-subtitle">API reference for external applications that call VGen.</p>
         </div>
         <div className="usecases-base">
           <span>Base URL</span>
@@ -63,28 +115,60 @@ export function UsecasesPage() {
             </div>
 
             <div className="usecase-step">
-              <div className="usecase-step-title"><LockKeyhole size={15} /> Bearer token</div>
-              <p>External apps use the system token directly as the bearer token on every protected API call.</p>
+              <div className="usecase-step-title"><LockKeyhole size={15} /> Authentication</div>
+              <p>All endpoints require a bearer token. Use the system token from Settings.</p>
               <pre>{authCode}</pre>
             </div>
 
             <div className="usecase-step">
               <div className="usecase-step-title"><FileImage size={15} /> Create a render</div>
-              <p>Submit multipart form data. Use one `images` file per scene and repeat `scripts` in the same order.</p>
+              <p>Submit a JSON body with text blocks. Each block becomes one scene with generated image and TTS narration.</p>
               <pre>{renderCode}</pre>
+              <table className="usecase-fields-table">
+                <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+                <tbody>
+                  {renderFieldsTable.map((f) => (
+                    <tr key={f.field}>
+                      <td><code>{f.field}</code></td>
+                      <td><code>{f.type}</code></td>
+                      <td>{f.required ? "Yes" : "No"}</td>
+                      <td>{f.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
               <pre>{curlCode}</pre>
             </div>
 
             <div className="usecase-step">
-              <div className="usecase-step-title"><Code2 size={15} /> Render response</div>
-              <p>External render requests upload immediately when generation completes.</p>
-              <pre>{responseCode}</pre>
+              <div className="usecase-step-title"><Code2 size={15} /> Response</div>
+              <p>Direct renders return the storage path immediately. Preview renders return a job ID for the confirm-upload flow.</p>
+              <pre>{responseDirectCode}</pre>
+              <pre>{responsePreviewCode}</pre>
             </div>
 
             <div className="usecase-step">
-              <div className="usecase-step-title"><UploadCloud size={15} /> Job and preview endpoints</div>
-              <p>Use `wait` for long polling, `preview` to stream the MP4, and `confirm-upload` to push the previewed file to storage.</p>
+              <div className="usecase-step-title"><RefreshCw size={15} /> Pipeline</div>
+              <p>Each render goes through these steps. Track progress via the events endpoint.</p>
+              <table className="usecase-fields-table">
+                <thead><tr><th>Step</th><th>Description</th></tr></thead>
+                <tbody>
+                  {pipelineSteps.map((s) => (
+                    <tr key={s.step}>
+                      <td><code>{s.step}</code></td>
+                      <td>{s.desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <pre>{eventsResponseCode}</pre>
+            </div>
+
+            <div className="usecase-step">
+              <div className="usecase-step-title"><UploadCloud size={15} /> Job endpoints</div>
+              <p>Manage jobs: list, poll, preview the rendered video, confirm upload, discard, cancel, or resend to Telegram.</p>
               <pre>{jobCode}</pre>
+              <pre>{jobResponseCode}</pre>
             </div>
           </article>
 

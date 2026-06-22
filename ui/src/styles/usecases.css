@@ -158,6 +158,37 @@
   margin: 10px 0 0;
 }
 
+.usecase-fields-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 10px 0 0;
+  width: 100%;
+}
+
+.usecase-fields-table th {
+  background: var(--surface-2);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 6px 10px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.usecase-fields-table td {
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  vertical-align: top;
+}
+
+.usecase-fields-table code {
+  color: var(--accent);
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 12px;
+}
+
 .usecase-upcoming-copy {
   margin: 0;
   padding: 18px;

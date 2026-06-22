@@ -4,17 +4,15 @@ import type { StorageClient } from "../../../core/shared-kernel/contracts/storag
 import type { VideoDeliveryClient, VideoDeliveryFailure, VideoDeliveryOutcome } from "../../../core/shared-kernel/contracts/video-delivery-client.js";
 import { basename } from "node:path";
 import { unlink } from "node:fs/promises";
-
-const SIXGATE_BASE_URL = process.env.SIXGATE_BASE_URL || "http://localhost:20130";
+import { randomUUID } from "node:crypto";
 
 interface AwaitingUploadResult {
   localPath: string;
   destinationPath: string;
   label: string;
+  title?: string;
   caption?: string;
-  telegramCaptionTemplate?: string;
   destinationIds?: string[];
-  sixgateGroupId?: string;
 }
 
 export class ConfirmUploadRenderJobUseCase {
@@ -24,6 +22,18 @@ export class ConfirmUploadRenderJobUseCase {
     private readonly videoDelivery: VideoDeliveryClient
   ) {}
 
+  private async emitEvent(renderJobId: string, step: string, status: string, metadata?: Record<string, unknown>): Promise<void> {
+    await this.prisma.renderJobEvent.create({
+      data: {
+        id: randomUUID(),
+        renderJobId,
+        level: status,
+        message: `${step}:${status}`,
+        metadataJson: metadata ? JSON.stringify(metadata) : null
+      }
+    }).catch(() => {});
+  }
+
   async execute(renderJobId: string): Promise<{ absolutePath: string; cdnUrl?: string }> {
     const job = await this.prisma.renderJob.findUnique({ where: { id: renderJobId } });
     if (!job) throw new Error(`Render job not found: ${renderJobId}`);
@@ -31,21 +41,24 @@ export class ConfirmUploadRenderJobUseCase {
 
     const result = JSON.parse(job.resultJson!) as AwaitingUploadResult;
 
+    await this.emitEvent(renderJobId, "upload", "started");
     const { absolutePath, cdnUrl } = await this.storage.upload({
       localPath: result.localPath,
       destinationPath: result.destinationPath,
       contentType: "video/mp4"
     });
+    await this.emitEvent(renderJobId, "upload", "completed", { absolutePath });
 
+    await this.emitEvent(renderJobId, "telegram", "started");
     const telegram = await this.deliverToTelegram(result, absolutePath, cdnUrl);
-    const sixgate = await this.enqueueToSixGate(result.sixgateGroupId, result.label, absolutePath, result.caption, cdnUrl);
+    await this.emitEvent(renderJobId, "telegram", telegram?.some(t => t.status === "failed") ? "failed" : "completed");
     await unlink(result.localPath).catch(() => {});
 
     await this.prisma.renderJob.update({
       where: { id: renderJobId },
       data: {
         status: RenderJobStatus.Completed,
-        resultJson: JSON.stringify({ absolutePath, cdnUrl, label: result.label, telegram, sixgate }),
+        resultJson: JSON.stringify({ absolutePath, cdnUrl, label: result.label, telegram }),
         completedAt: new Date()
       }
     });
@@ -62,11 +75,7 @@ export class ConfirmUploadRenderJobUseCase {
       return await this.videoDelivery.deliverVideo({
         localPath: result.localPath,
         filename: basename(result.destinationPath),
-        caption: this.renderCaption(result.telegramCaptionTemplate, {
-          label: result.label,
-          absolutePath,
-          cdnUrl: cdnUrl ?? ""
-        }),
+        caption: this.buildCaption(result.title ?? result.label, result.caption ?? "", absolutePath),
         destinationIds: result.destinationIds
       });
     } catch (error) {
@@ -85,44 +94,7 @@ export class ConfirmUploadRenderJobUseCase {
     };
   }
 
-  private async enqueueToSixGate(
-    groupId: string | undefined,
-    label: string,
-    absolutePath: string,
-    caption?: string,
-    cdnUrl?: string
-  ): Promise<{ queued: boolean; error?: string }> {
-    if (!groupId) return { queued: false, error: "No 6Gate group selected" };
-    try {
-      const body: Record<string, string> = { title: label };
-      if (caption) body.caption = caption;
-      if (cdnUrl) {
-        body.videoUrl = cdnUrl;
-      } else {
-        body.absolutePath = absolutePath;
-      }
-      const res = await fetch(`${SIXGATE_BASE_URL}/api/groups/${groupId}/queue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const msg = (data as { error?: string }).error ?? `HTTP ${res.status}`;
-        console.error(`[6Gate] Enqueue failed: ${msg}`);
-        return { queued: false, error: msg };
-      }
-      console.log(`[6Gate] Enqueued "${label}" to group ${groupId}`);
-      return { queued: true };
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : "Unknown error";
-      console.error(`[6Gate] Enqueue error: ${msg}`);
-      return { queued: false, error: msg };
-    }
-  }
-
-  private renderCaption(template: string | undefined, values: Record<string, string>): string {
-    const source = template?.trim() || "{label}\n\n{cdnUrl}";
-    return source.replace(/\{(label|absolutePath|cdnUrl)\}/g, (_match, key: string) => values[key] ?? "");
+  private buildCaption(title: string, caption: string, absolutePath: string): string {
+    return `/queue\n@7router: ${absolutePath}\n@title: ${title}\n@caption: ${caption}`;
   }
 }

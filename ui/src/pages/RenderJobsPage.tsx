@@ -282,15 +282,20 @@ function PipelineProgress({ jobId, jobStatus, absolutePath, telegram }: { jobId:
         <PNode stepKey="rendering" state={s.rendering} nodeRef={setRef("rendering")} expanded={expanded === "rendering"} onToggle={toggle("rendering")} />
       </div>
       <div className="pg-row pg-row-center">
-        <PNode stepKey="upload" state={s.upload} nodeRef={setRef("upload")} expanded={expanded === "upload"} onToggle={toggle("upload")}>
-          {absolutePath && (
-            <div className="pn-detail-path" onClick={(e) => { e.stopPropagation(); void navigator.clipboard.writeText(absolutePath); }}>
-              <span className="pn-detail-label">Path</span>
-              <span className="pn-detail-path-value" title={absolutePath}>{absolutePath}</span>
-              <Copy size={10} className="pn-detail-copy" />
-            </div>
-          )}
-        </PNode>
+        {(() => {
+          const uploadPath = absolutePath ?? (s.upload.metadata?.absolutePath as string | undefined);
+          return (
+            <PNode stepKey="upload" state={s.upload} nodeRef={setRef("upload")} expanded={expanded === "upload"} onToggle={toggle("upload")}>
+              {uploadPath && (
+                <div className="pn-detail-path" onClick={(e) => { e.stopPropagation(); void navigator.clipboard.writeText(uploadPath); }}>
+                  <span className="pn-detail-label">Path</span>
+                  <span className="pn-detail-path-value" title={uploadPath}>{uploadPath}</span>
+                  <Copy size={10} className="pn-detail-copy" />
+                </div>
+              )}
+            </PNode>
+          );
+        })()}
       </div>
       <div className="pg-row pg-row-center">
         <PNode stepKey="telegram" state={s.telegram} nodeRef={setRef("telegram")} expanded={expanded === "telegram"} onToggle={toggle("telegram")}>

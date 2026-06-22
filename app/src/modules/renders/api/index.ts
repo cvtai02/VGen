@@ -7,6 +7,7 @@ import { registerDeleteTelegramDestinationApi } from "./delete-telegram-destinat
 import { registerGetRenderJobApi } from "./get-render-job.api.js";
 import { registerListRenderJobsApi } from "./list-render-jobs.api.js";
 import { registerRenderHealthApi } from "./render-health.api.js";
+import { registerStorageSettingsApi } from "./storage-settings.api.js";
 import { registerSyncTelegramBotApi } from "./sync-telegram-bot.api.js";
 import { registerTelegramSettingsApi } from "./telegram-settings.api.js";
 import { registerTtsSettingsApi } from "./tts-settings.api.js";
@@ -17,6 +18,7 @@ export async function registerRenderApis(app: FastifyInstance, container: AppCon
   await registerRenderHealthApi(app);
   await registerGetRenderJobApi(app, container);
   await registerListRenderJobsApi(app, container);
+  await registerStorageSettingsApi(app, container);
   await registerTelegramSettingsApi(app, container);
   await registerAddTelegramBotApi(app, container);
   await registerUpdateTelegramBotApi(app, container);

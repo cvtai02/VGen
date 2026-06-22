@@ -253,6 +253,12 @@ button, input, textarea, select {
   margin-bottom: 18px;
 }
 
+.form-row {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
 .form-label {
   color: var(--text-secondary);
   display: block;
@@ -465,6 +471,233 @@ pre {
   font-size: 13px;
   padding: 40px;
   text-align: center;
+}
+
+/* ── Pipeline progress (graph layout) ── */
+
+.pg {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 0 12px;
+}
+
+.pg-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.pg-row {
+  display: flex;
+  position: relative;
+  z-index: 1;
+}
+
+.pg-row-center {
+  justify-content: center;
+}
+
+.pg-row-parallel {
+  justify-content: center;
+  gap: 24px;
+}
+
+/* ── Pipeline node card ── */
+
+.pn {
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  width: 220px;
+}
+
+.pn-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.pn-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pn-info {
+  min-width: 0;
+}
+
+.pn-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pn-subtitle {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.pn-status-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pn-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pn-dot-pulse {
+  animation: pn-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.pn-status-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.pn-duration {
+  font-size: 10px;
+  color: var(--text-secondary);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.pn-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.pn-expanded {
+  width: 280px;
+}
+
+.pn-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.pn-detail-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.pn-detail-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pn-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
+.pn-detail-label {
+  color: var(--text-muted);
+}
+
+.pn-detail-value {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pn-detail-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pn-detail-path:hover {
+  border-color: var(--border-light);
+}
+
+.pn-detail-path-value {
+  font-size: 10px;
+  color: var(--accent);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: monospace;
+}
+
+.pn-detail-copy {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.pn-detail-tg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pn-detail-tg-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.pn-detail-tg-name {
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pn-detail-tg-link {
+  color: var(--accent);
+  font-size: 10px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.pn-detail-tg-link:hover {
+  color: var(--accent-hover);
+}
+
+.pn-detail-tg-err {
+  color: var(--error);
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
 }
 
 /* ── Settings status ── */
@@ -1136,6 +1369,10 @@ select:focus {
 
   .panel {
     padding: 20px 16px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
   }
 
   .job-card {

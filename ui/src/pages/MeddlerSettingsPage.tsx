@@ -1,4 +1,4 @@
-import { Loader, Save } from "lucide-react";
+import { Loader, Save, Plug } from "lucide-react";
 import { useEffect, useState } from "react";
 import { settingsClient, type TtsSettings } from "../api/clients.js";
 

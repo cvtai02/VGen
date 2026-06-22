@@ -7,6 +7,8 @@ Vite React admin interface for VGen.
 - Log in with the app `SYSTEM_SECRET`.
 - Store the issued bearer token in local storage.
 - Configure DB-backed runtime settings through protected app APIs.
+- Configure 7router upload settings for generated videos.
+- Configure Meddler text-to-speech settings.
 - Configure Telegram delivery for completed Zhihugen videos.
 - Create Zhihugen render jobs.
 - Review and manage render job status.

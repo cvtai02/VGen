@@ -14,7 +14,7 @@ export async function registerAddTelegramBotApi(app: FastifyInstance, container:
         if (!botToken) return reply.code(400).send(apiError(400, "Bad Request", "botToken is required."));
 
         const botInfo = await telegramRequest<TelegramBotInfo>(botToken, "getMe");
-        const bot = createBot({ name: request.body?.name, botToken, bot: botInfo });
+        const bot = createBot({ botToken, bot: botInfo });
         const chatId = request.body?.chatId?.trim();
         if (chatId) {
           const chat = await telegramRequest<TelegramChatInfo>(botToken, "getChat", { chat_id: chatId });

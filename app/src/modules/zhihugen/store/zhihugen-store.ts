@@ -9,7 +9,6 @@ export interface ZhihugenSettings {
   defaultResolution: string;
   defaultTtsModel: string;
   defaultTelegramDestinationIds: string[];
-  defaultSixgateGroupId: string;
 }
 
 export interface TtsModel {
@@ -36,8 +35,7 @@ const defaultData: ZhihugenStoreData = {
     defaultImageFit: "contain",
     defaultResolution: "1080x1920",
     defaultTtsModel: "edge-tts/vi-VN-HoaiMyNeural",
-    defaultTelegramDestinationIds: [],
-    defaultSixgateGroupId: ""
+    defaultTelegramDestinationIds: []
   },
   ttsModels: [{ id: "edge-tts/vi-VN-HoaiMyNeural", name: "vi-VN-HoaiMy (Edge TTS)", provider: "edge-tts", enabled: true }],
   defaultTtsModelId: "edge-tts/vi-VN-HoaiMyNeural"

@@ -1,7 +1,11 @@
+export type RenderProgressStep = "tts" | "rendering";
+
 export interface RenderEngineInput {
   renderJobId: string;
   type: string;
   request: unknown;
+  onProgress?: (step: RenderProgressStep, status: "started" | "completed") => void;
+  bgVideoReady?: Promise<string>;
 }
 
 export interface RenderEngineOutput {

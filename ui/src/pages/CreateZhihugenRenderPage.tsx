@@ -5,6 +5,7 @@ import {
   zhihugenClient,
   type TelegramDestination,
   type TextBlock,
+  type TtsModel,
   type ZhihugenRenderRequest,
   type ZhihugenSettings,
 } from "../api/clients.js";
@@ -83,12 +84,14 @@ function ZhihugenSettingsDialog({
   open,
   settings,
   telegramDests,
+  ttsModels,
   onSave,
   onClose,
 }: {
   open: boolean;
   settings: ZhihugenSettings | null;
   telegramDests: { botId: string; botName: string; dest: TelegramDestination }[];
+  ttsModels: TtsModel[];
   onSave: (s: Partial<ZhihugenSettings>) => Promise<void>;
   onClose: () => void;
 }) {
@@ -139,7 +142,7 @@ function ZhihugenSettingsDialog({
         </div>
         <div className="modal-body">
           <div className="form-group">
-            <label className="form-label">Output Directory</label>
+            <label className="form-label">7router Output Path</label>
             <input type="text" value={outputDir} onChange={(e) => setOutputDir(e.target.value)} placeholder="CloudflareR2/my-account/my-bucket/videos" className="font-mono" />
           </div>
           <div className="form-group">
@@ -152,7 +155,16 @@ function ZhihugenSettingsDialog({
           </div>
           <div className="form-group">
             <label className="form-label">TTS Model</label>
-            <input type="text" value={ttsModel} onChange={(e) => setTtsModel(e.target.value)} placeholder="edge-tts/vi-VN-HoaiMyNeural" className="font-mono" />
+            {ttsModels.length > 0 ? (
+              <select value={ttsModel} onChange={(e) => setTtsModel(e.target.value)}>
+                <option value="">— Select —</option>
+                {ttsModels.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name} ({m.provider})</option>
+                ))}
+              </select>
+            ) : (
+              <input type="text" value={ttsModel} onChange={(e) => setTtsModel(e.target.value)} placeholder="edge-tts/vi-VN-HoaiMyNeural" className="font-mono" />
+            )}
           </div>
           {telegramDests.length > 0 && (
             <div className="form-group">
@@ -198,6 +210,13 @@ export function CreateZhihugenRenderPage() {
 
   const [zhgSettings, setZhgSettings] = useState<ZhihugenSettings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [ttsModels, setTtsModels] = useState<TtsModel[]>([]);
+
+  useEffect(() => {
+    zhihugenClient.listTtsModels()
+      .then((data) => setTtsModels(data.models))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let destsLoaded: { botId: string; botName: string; dest: TelegramDestination }[] = [];
@@ -417,6 +436,7 @@ export function CreateZhihugenRenderPage() {
         open={showSettings}
         settings={zhgSettings}
         telegramDests={telegramDests}
+        ttsModels={ttsModels}
         onSave={handleSaveSettings}
         onClose={() => setShowSettings(false)}
       />

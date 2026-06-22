@@ -6,6 +6,7 @@ import {
   zhihugenClient,
   type TelegramDestination,
   type TextBlock,
+  type TtsProvider,
   type TtsVoiceModel,
   type ZhihugenRenderRequest,
   type ZhihugenSettings,
@@ -85,21 +86,28 @@ function ZhihugenSettingsDialog({
   open,
   settings,
   telegramDests,
-  voiceModels,
+  providers,
+  initialProvider,
+  initialVoiceModels,
   onSave,
   onClose,
 }: {
   open: boolean;
   settings: ZhihugenSettings | null;
   telegramDests: { botId: string; botName: string; dest: TelegramDestination }[];
-  voiceModels: TtsVoiceModel[];
+  providers: TtsProvider[];
+  initialProvider: string;
+  initialVoiceModels: TtsVoiceModel[];
   onSave: (s: Partial<ZhihugenSettings>) => Promise<void>;
   onClose: () => void;
 }) {
   const [outputDir, setOutputDir] = useState("");
   const [bgVideo, setBgVideo] = useState("");
   const [bgMusic, setBgMusic] = useState("");
+  const [provider, setProvider] = useState(initialProvider);
   const [ttsModel, setTtsModel] = useState("");
+  const [voiceModels, setVoiceModels] = useState<TtsVoiceModel[]>(initialVoiceModels);
+  const [loadingModels, setLoadingModels] = useState(false);
   const [selDestIds, setSelDestIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -111,6 +119,20 @@ function ZhihugenSettingsDialog({
     setTtsModel(settings.defaultTtsModel ?? "");
     setSelDestIds(new Set(settings.defaultTelegramDestinationIds ?? []));
   }, [settings]);
+
+  useEffect(() => {
+    setVoiceModels(initialVoiceModels);
+  }, [initialVoiceModels]);
+
+  function handleProviderChange(nextProvider: string) {
+    setProvider(nextProvider);
+    setTtsModel("");
+    setLoadingModels(true);
+    ttsClient.getVoiceModels(nextProvider)
+      .then((data) => setVoiceModels(data.voiceModels))
+      .catch(() => setVoiceModels([]))
+      .finally(() => setLoadingModels(false));
+  }
 
   if (!open) return null;
 
@@ -155,8 +177,25 @@ function ZhihugenSettingsDialog({
             <input type="text" value={bgMusic} onChange={(e) => setBgMusic(e.target.value)} placeholder="./media/music.mp3 (optional)" className="font-mono" />
           </div>
           <div className="form-group">
-            <label className="form-label">TTS Voice</label>
-            {voiceModels.length > 0 ? (
+            <label className="form-label">Meddler Provider</label>
+            {providers.length > 0 ? (
+              <select value={provider} onChange={(e) => handleProviderChange(e.target.value)}>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}{!p.connected ? " (not connected)" : ""}</option>
+                ))}
+              </select>
+            ) : (
+              <select value={provider} onChange={(e) => handleProviderChange(e.target.value)}>
+                <option value="elevenlabs">ElevenLabs</option>
+                <option value="soniox">Soniox</option>
+              </select>
+            )}
+          </div>
+          <div className="form-group">
+            <label className="form-label">Meddler Voice</label>
+            {loadingModels ? (
+              <div className="settings-loading"><Loader size={12} className="spin" /> Loading voices...</div>
+            ) : voiceModels.length > 0 ? (
               <select value={ttsModel} onChange={(e) => setTtsModel(e.target.value)}>
                 <option value="">— Select —</option>
                 {voiceModels.map((vm) => (
@@ -211,11 +250,19 @@ export function CreateZhihugenRenderPage() {
 
   const [zhgSettings, setZhgSettings] = useState<ZhihugenSettings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [ttsProviders, setTtsProviders] = useState<TtsProvider[]>([]);
+  const [ttsProvider, setTtsProvider] = useState("elevenlabs");
   const [voiceModels, setVoiceModels] = useState<TtsVoiceModel[]>([]);
 
   useEffect(() => {
+    ttsClient.getProviders()
+      .then((data) => setTtsProviders(data.providers))
+      .catch(() => {});
     settingsClient.getTts()
-      .then((tts) => ttsClient.getVoiceModels(tts.provider))
+      .then((tts) => {
+        setTtsProvider(tts.provider);
+        return ttsClient.getVoiceModels(tts.provider);
+      })
       .then((data) => setVoiceModels(data.voiceModels))
       .catch(() => {});
   }, []);
@@ -438,7 +485,9 @@ export function CreateZhihugenRenderPage() {
         open={showSettings}
         settings={zhgSettings}
         telegramDests={telegramDests}
-        voiceModels={voiceModels}
+        providers={ttsProviders}
+        initialProvider={ttsProvider}
+        initialVoiceModels={voiceModels}
         onSave={handleSaveSettings}
         onClose={() => setShowSettings(false)}
       />

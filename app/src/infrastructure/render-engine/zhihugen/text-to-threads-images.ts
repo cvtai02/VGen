@@ -16,7 +16,7 @@ const AUTHOR_FONT_SIZE = 24;
 const BG_COLOR = "#101010";
 const TEXT_COLOR = "#d0d0d0";
 const AUTHOR_COLOR = "#ffffff";
-const AVATAR_SIZE = 48;
+const AVATAR_SIZE = 40;
 
 function diceBearUrl(seed: string): string {
   return `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;

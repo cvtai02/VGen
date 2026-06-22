@@ -6,7 +6,7 @@ import { apiError } from "../../../core/shared-kernel/api-error.js";
 import { RenderJobType } from "../../../core/shared-kernel/enums/render-job-type.js";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import type { AppContainer } from "../../../container.js";
-import { formatJobResponse, toZhihugenStatus, type ZhihugenJobRequest, type ZhihugenJobResult } from "../store/job-helpers.js";
+import { deliverToTelegram, formatJobResponse, toZhihugenStatus, type ZhihugenJobRequest, type ZhihugenJobResult } from "../store/job-helpers.js";
 
 type IdParam = { Params: { id: string } };
 
@@ -180,12 +180,13 @@ export async function registerZhihugenJobsApis(app: FastifyInstance, container: 
     });
 
     const req = JSON.parse(job.requestJson) as ZhihugenJobRequest;
-    const caption = `/queue\n@title: ${req.title}\n@caption: ${req.caption}`;
 
-    const telegram = await container.videoDelivery.deliverVideo({
+    const telegram = await deliverToTelegram(container.videoDelivery, {
       localPath: result.absolutePath,
       filename: basename(result.absolutePath),
-      caption,
+      title: req.title ?? req.label,
+      caption: req.caption ?? "",
+      absolutePath: result.absolutePath,
       destinationIds: req.destinationIds
     });
 

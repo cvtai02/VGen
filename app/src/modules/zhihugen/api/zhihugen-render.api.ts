@@ -7,15 +7,14 @@ import { apiError } from "../../../core/shared-kernel/api-error.js";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
 import { RenderJobType } from "../../../core/shared-kernel/enums/render-job-type.js";
 import type { AppContainer } from "../../../container.js";
-import { generateJobId, generateOutputFilename, type TextBlock, type ZhihugenJobRequest } from "../store/job-helpers.js";
+import { emitJobEvent, generateJobId, generateOutputFilename, type TextBlock, type ZhihugenJobRequest } from "../store/job-helpers.js";
 import { renderTextBlocksToImages } from "../../../infrastructure/render-engine/zhihugen/text-to-threads-images.js";
 
 interface RenderRequestBody {
   blocks: TextBlock[];
   title: string;
   caption?: string;
-  destinationIds?: string[];
-  sixgateGroupId?: string;
+  telegramDestinations?: string[];
   previewBeforeUpload?: boolean;
 }
 
@@ -34,6 +33,8 @@ async function createAndRender(container: AppContainer, req: ZhihugenJobRequest,
     }
   });
 
+  await emitJobEvent(container.prisma, id, "images_generation", "completed");
+
   try {
     const result = await container.renderLimiter.run(() =>
       container.executeRenderJobUseCase.execute(id)
@@ -50,7 +51,7 @@ async function createAndRender(container: AppContainer, req: ZhihugenJobRequest,
 
 export async function registerZhihugenRenderApis(app: FastifyInstance, container: AppContainer): Promise<void> {
   app.post<{ Body: RenderRequestBody }>("/api/zhihugen/render", async (request, reply) => {
-    const { blocks, title, caption, destinationIds, sixgateGroupId, previewBeforeUpload } = request.body ?? {};
+    const { blocks, title, caption, telegramDestinations, previewBeforeUpload } = request.body ?? {};
 
     if (!blocks?.length) {
       return reply.code(400).send(apiError(400, "Bad Request", "At least one text block is required."));
@@ -83,9 +84,7 @@ export async function registerZhihugenRenderApis(app: FastifyInstance, container
         imageFit: store.settings.defaultImageFit,
         sceneCount: blocks.length,
         previewBeforeUpload: previewBeforeUpload ?? false,
-        telegramCaptionTemplate: container.settings.telegram.captionTemplate,
-        destinationIds: destinationIds?.length ? destinationIds : undefined,
-        sixgateGroupId: sixgateGroupId || undefined
+        destinationIds: telegramDestinations?.length ? telegramDestinations : undefined
       };
 
       return await createAndRender(container, req, reply);

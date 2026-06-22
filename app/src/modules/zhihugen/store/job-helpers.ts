@@ -1,5 +1,7 @@
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { RenderJobStatus } from "../../../core/shared-kernel/enums/render-job-status.js";
+import type { PrismaContext } from "../../../core/database/prisma-context.js";
+import type { VideoDeliveryClient, VideoDeliveryFailure, VideoDeliveryOutcome } from "../../../core/shared-kernel/contracts/video-delivery-client.js";
 
 function timestampSlug(): { date: string; time: string; rand: string } {
   const d = new Date().toISOString();
@@ -49,9 +51,7 @@ export interface ZhihugenJobRequest {
   sceneCount: number;
   previewBeforeUpload?: boolean;
   backgroundVideoLocalPath?: string;
-  telegramCaptionTemplate?: string;
   destinationIds?: string[];
-  sixgateGroupId?: string;
 }
 
 export interface ZhihugenJobResult {
@@ -74,6 +74,53 @@ export interface ZhihugenJobResult {
     error?: string;
     failedAt?: string;
   }> | null;
+}
+
+export function buildTelegramCaption(title: string, caption: string, absolutePath: string): string {
+  return `/queue\n@7router: ${absolutePath}\n@title: ${title}\n@caption: ${caption}`;
+}
+
+export function toTelegramFailure(error: unknown): VideoDeliveryFailure {
+  return {
+    provider: "telegram",
+    status: "failed",
+    error: error instanceof Error ? error.message : "Telegram delivery failed.",
+    failedAt: new Date().toISOString()
+  };
+}
+
+export async function deliverToTelegram(
+  videoDelivery: VideoDeliveryClient,
+  input: { localPath: string; filename: string; title: string; caption: string; absolutePath: string; destinationIds?: string[] }
+): Promise<VideoDeliveryOutcome[] | null> {
+  try {
+    return await videoDelivery.deliverVideo({
+      localPath: input.localPath,
+      filename: input.filename,
+      caption: buildTelegramCaption(input.title, input.caption, input.absolutePath),
+      destinationIds: input.destinationIds
+    });
+  } catch (error) {
+    return [toTelegramFailure(error)];
+  }
+}
+
+export async function emitJobEvent(
+  prisma: PrismaContext,
+  renderJobId: string,
+  step: string,
+  status: string,
+  metadata?: Record<string, unknown>
+): Promise<void> {
+  await prisma.renderJobEvent.create({
+    data: {
+      id: randomUUID(),
+      renderJobId,
+      level: status,
+      message: `${step}:${status}`,
+      metadataJson: metadata ? JSON.stringify(metadata) : null
+    }
+  }).catch(() => {});
 }
 
 function safeJsonParse<T>(json: string | null | undefined): T | null {

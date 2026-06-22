@@ -158,7 +158,7 @@ function ZhihugenSettingsDialog({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480, maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
         <div className="modal-header">
           <h3>Zhihugen Settings</h3>
           <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={14} /></button>

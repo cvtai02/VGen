@@ -52,29 +52,41 @@ async function generateTts(opts: {
   model: string;
   ttsBaseUrl: string;
   ttsApiKey: string;
+  provider: string;
+  voiceModel: string;
   outputPath: string;
 }): Promise<void> {
-  const { text, model, ttsBaseUrl, ttsApiKey, outputPath } = opts;
+  const { text, model, ttsBaseUrl, ttsApiKey, provider, voiceModel, outputPath } = opts;
 
   if (!text.trim()) {
     await run(FFMPEG, ["-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo", "-t", "3", outputPath]);
     return;
   }
 
-  const res = await fetch(`${ttsBaseUrl}/v1/audio/speech`, {
+  const baseUrl = ttsBaseUrl.trim().replace(/\/+$/, "");
+  const res = await fetch(`${baseUrl}/api/tts`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${ttsApiKey}`
     },
-    body: JSON.stringify({ model, input: text })
+    body: JSON.stringify({ provider, voiceModel: voiceModel || model, text })
   });
 
   if (!res.ok) {
     throw new Error(`TTS request failed: ${res.status} ${await res.text().catch(() => "")}`);
   }
 
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType.startsWith("application/json") || contentType.startsWith("text/")) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`TTS returned non-audio response (${contentType}): ${body.slice(0, 300)}`);
+  }
+
   const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length === 0) {
+    throw new Error("TTS returned empty audio response");
+  }
   await writeFile(outputPath, buffer);
 }
 
@@ -82,7 +94,7 @@ async function generateTts(opts: {
 
 async function getAudioDuration(audioPath: string): Promise<number> {
   const out = await runCapture(FFPROBE, [
-    "-v", "quiet",
+    "-v", "error",
     "-show_entries", "format=duration",
     "-of", "csv=p=0",
     audioPath
@@ -94,23 +106,25 @@ async function getAudioDuration(audioPath: string): Promise<number> {
 
 export class ZhihugenRenderEngine implements RenderEngine {
   constructor(
-    private readonly getTtsSettings: () => { baseUrl: string; apiKey: string }
+    private readonly getTtsSettings: () => { baseUrl: string; apiKey: string; provider: string; voiceModel: string }
   ) {}
 
   async render(input: RenderEngineInput): Promise<RenderEngineOutput> {
     const req = input.request as ZhihugenJobRequest;
-    const { baseUrl: ttsBaseUrl, apiKey: ttsApiKey } = this.getTtsSettings();
+    const progress = input.onProgress;
+    const { baseUrl: ttsBaseUrl, apiKey: ttsApiKey, provider, voiceModel } = this.getTtsSettings();
     const workDir = join(tmpdir(), `zhihugen-${randomUUID()}`);
     await mkdir(workDir, { recursive: true });
 
     const [width, height] = req.resolution.split("x").map(Number);
-    const bgVideoPath = req.backgroundVideoLocalPath!;
+    let bgVideoPath = req.backgroundVideoLocalPath!;
     const margin = 40;
     const innerW = width - margin * 2;
     const innerH = height - margin * 2;
     const n = req.images.length;
 
     // ── Step 1: Generate all TTS audio in parallel, then get durations ───────
+    progress?.("tts", "started");
     const audioPaths = req.images.map((_, i) => join(workDir, `audio_${i}.mp3`));
 
     await Promise.all(
@@ -120,12 +134,19 @@ export class ZhihugenRenderEngine implements RenderEngine {
           model: req.ttsModel,
           ttsBaseUrl,
           ttsApiKey,
+          provider,
+          voiceModel,
           outputPath: audioPath
         })
       )
     );
 
     const durations = await Promise.all(audioPaths.map(getAudioDuration));
+    progress?.("tts", "completed");
+
+    if (input.bgVideoReady) {
+      bgVideoPath = await input.bgVideoReady;
+    }
 
     const GAP = 0.5;     // silence between scenes (seconds)
     const WIPE = 0.1;    // wipe-to-left exit duration (seconds)
@@ -207,7 +228,9 @@ export class ZhihugenRenderEngine implements RenderEngine {
       finalPath
     );
 
+    progress?.("rendering", "started");
     await run(FFMPEG, args);
+    progress?.("rendering", "completed");
 
     return { localPath: finalPath, format: "mp4" };
   }

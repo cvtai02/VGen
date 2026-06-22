@@ -1,7 +1,7 @@
 import { tmpdir } from "node:os";
 import { join, extname } from "node:path";
 import { createWriteStream } from "node:fs";
-import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
+import { mkdir, stat, unlink } from "node:fs/promises";
 import { createHash, randomUUID } from "node:crypto";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
@@ -65,18 +65,14 @@ export class ExecuteRenderJobUseCase {
 
     // Start background video download in parallel with TTS (cached)
     await this.emitEvent(renderJobId, "download_resources", "started");
-    const bgVideoLocalPath = join(tmpdir(), `bg_${randomUUID()}.mp4`);
     const bgVideoReady = (async () => {
       await mkdir(CACHE_DIR, { recursive: true });
       const cached = cachePath(req.backgroundVideoPath);
-      if (await fileExists(cached)) {
-        await copyFile(cached, bgVideoLocalPath);
-      } else {
+      if (!await fileExists(cached)) {
         await downloadUrl(req.backgroundVideoPath, cached);
-        await copyFile(cached, bgVideoLocalPath);
       }
       await this.emitEvent(renderJobId, "download_resources", "completed");
-      return bgVideoLocalPath;
+      return cached;
     })();
 
     const destinationPath = `${req.outputDirectory.replace(/\/+$/, "")}/${req.outputFilename}`;
@@ -96,7 +92,6 @@ export class ExecuteRenderJobUseCase {
       });
     } finally {
       await bgVideoReady.catch(() => {});
-      await unlink(bgVideoLocalPath).catch(() => {});
     }
 
     if (req.previewBeforeUpload) {

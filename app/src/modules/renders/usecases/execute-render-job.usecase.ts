@@ -1,4 +1,4 @@
-import { tmpdir } from "node:os";
+import { homedir } from "node:os";
 import { join, extname } from "node:path";
 import { createWriteStream } from "node:fs";
 import { mkdir, stat, unlink } from "node:fs/promises";
@@ -12,7 +12,7 @@ import type { StorageClient } from "../../../core/shared-kernel/contracts/storag
 import type { VideoDeliveryClient, VideoDeliveryFailure, VideoDeliveryOutcome } from "../../../core/shared-kernel/contracts/video-delivery-client.js";
 import type { ZhihugenJobRequest } from "../../zhihugen/store/job-helpers.js";
 
-const CACHE_DIR = join(tmpdir(), "vgen-resource-cache");
+const CACHE_DIR = join(homedir(), ".vgen", "resource-cache");
 
 function cacheKey(sourcePath: string): string {
   return createHash("sha256").update(sourcePath).digest("hex").slice(0, 16);

@@ -1,8 +1,11 @@
+import { createWriteStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { RenderEngine, RenderEngineInput, RenderEngineOutput } from "../../../core/shared-kernel/contracts/render-engine.js";
 import type { ZhihugenJobRequest } from "../../../modules/zhihugen/store/job-helpers.js";
 
@@ -117,11 +120,19 @@ async function hasAudioStream(filePath: string): Promise<boolean> {
   }
 }
 
+async function downloadUrl(url: string, dest: string): Promise<void> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Download failed: ${res.status} ${url}`);
+  if (!res.body) throw new Error(`Empty response body: ${url}`);
+  await pipeline(Readable.fromWeb(res.body as any), createWriteStream(dest));
+}
+
 // ── Engine ────────────────────────────────────────────────────────────────────
 
 export class ZhihugenRenderEngine implements RenderEngine {
   constructor(
-    private readonly getTtsSettings: () => { baseUrl: string; apiKey: string; provider: string; voiceModel: string }
+    private readonly getTtsSettings: () => { baseUrl: string; apiKey: string; provider: string; voiceModel: string },
+    private readonly getBackgroundMusicPath?: () => Promise<string>
   ) {}
 
   async render(input: RenderEngineInput): Promise<RenderEngineOutput> {
@@ -227,12 +238,26 @@ export class ZhihugenRenderEngine implements RenderEngine {
       filters.push(`${audioSegments.join("")}concat=n=${2 * n}:v=0:a=1[ttsout]`);
     }
 
-    const bgHasAudio = await hasAudioStream(bgVideoPath);
-    if (bgHasAudio) {
-      filters.push(`[0:a]volume=0.3[bgaudio]`);
+    let bgMusicInputIdx: number | null = null;
+    const bgMusicUrl = this.getBackgroundMusicPath ? await this.getBackgroundMusicPath() : "";
+    if (bgMusicUrl) {
+      const bgMusicLocal = join(workDir, "bgmusic.mp3");
+      await downloadUrl(bgMusicUrl, bgMusicLocal);
+      bgMusicInputIdx = args.filter(a => a === "-i").length;
+      args.push("-stream_loop", "-1", "-i", bgMusicLocal);
+    }
+
+    if (bgMusicInputIdx != null) {
+      filters.push(`[${bgMusicInputIdx}:a]volume=0.3[bgaudio]`);
       filters.push(`[ttsout][bgaudio]amix=inputs=2:duration=first:normalize=0[aout]`);
     } else {
-      filters.push(`[ttsout]anull[aout]`);
+      const bgHasAudio = await hasAudioStream(bgVideoPath);
+      if (bgHasAudio) {
+        filters.push(`[0:a]volume=0.3[bgaudio]`);
+        filters.push(`[ttsout][bgaudio]amix=inputs=2:duration=first:normalize=0[aout]`);
+      } else {
+        filters.push(`[ttsout]anull[aout]`);
+      }
     }
     const finalPath = join(workDir, "final.mp4");
 

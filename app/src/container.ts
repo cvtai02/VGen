@@ -41,7 +41,10 @@ export async function createContainer(): Promise<AppContainer> {
 
   const zhihugenStore = new ZhihugenStore(prismaClient);
   const idGenerator: IdGenerator = { createId: () => randomUUID() };
-  const renderEngine = new ZhihugenRenderEngine(() => settings.tts);
+  const renderEngine = new ZhihugenRenderEngine(
+    () => settings.tts,
+    async () => (await zhihugenStore.get()).settings.defaultBackgroundMusicPath
+  );
   const storage = new SevenRouterTempUploadStorageClient(() => settings.storage);
   const videoDelivery = new TelegramVideoDeliveryClient(() => settings.telegram);
   return {

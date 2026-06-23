@@ -102,6 +102,21 @@ async function getAudioDuration(audioPath: string): Promise<number> {
   return parseFloat(out) || 3;
 }
 
+async function hasAudioStream(filePath: string): Promise<boolean> {
+  try {
+    const out = await runCapture(FFPROBE, [
+      "-v", "error",
+      "-select_streams", "a",
+      "-show_entries", "stream=index",
+      "-of", "csv=p=0",
+      filePath
+    ]);
+    return out.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
 // ── Engine ────────────────────────────────────────────────────────────────────
 
 export class ZhihugenRenderEngine implements RenderEngine {
@@ -212,9 +227,13 @@ export class ZhihugenRenderEngine implements RenderEngine {
       filters.push(`${audioSegments.join("")}concat=n=${2 * n}:v=0:a=1[ttsout]`);
     }
 
-    // Mix TTS track with background video audio at 30% volume
-    filters.push(`[0:a]volume=0.3[bgaudio]`);
-    filters.push(`[ttsout][bgaudio]amix=inputs=2:duration=first:normalize=0[aout]`);
+    const bgHasAudio = await hasAudioStream(bgVideoPath);
+    if (bgHasAudio) {
+      filters.push(`[0:a]volume=0.3[bgaudio]`);
+      filters.push(`[ttsout][bgaudio]amix=inputs=2:duration=first:normalize=0[aout]`);
+    } else {
+      filters.push(`[ttsout]anull[aout]`);
+    }
     const finalPath = join(workDir, "final.mp4");
 
     args.push(

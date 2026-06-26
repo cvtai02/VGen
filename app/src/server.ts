@@ -5,6 +5,7 @@ import { apiError } from "./core/shared-kernel/api-error.js";
 import { registerAuthApis } from "./modules/auth/api/index.js";
 import { registerRenderApis } from "./modules/renders/api/index.js";
 import { registerZhihugenApis } from "./modules/zhihugen/api/index.js";
+import { registerThreadsApis } from "./modules/threads/api/index.js";
 
 export async function createServer(container: AppContainer) {
   const app = Fastify({ logger: true, bodyLimit: 100 * 1024 * 1024 });
@@ -36,5 +37,6 @@ export async function createServer(container: AppContainer) {
 
   await registerRenderApis(app, container);
   await registerZhihugenApis(app, container);
+  await registerThreadsApis(app, container);
   return app;
 }

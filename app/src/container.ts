@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { SettingsLoader } from "./config/settings.loader.js";
 import type { RuntimeSettings } from "./config/settings.schema.js";
 import { prismaClient } from "./core/database/prisma-client.js";
@@ -11,6 +12,7 @@ import { ZhihugenStore } from "./modules/zhihugen/store/zhihugen-store.js";
 import { ExecuteRenderJobUseCase } from "./modules/renders/usecases/execute-render-job.usecase.js";
 import { ConfirmUploadRenderJobUseCase } from "./modules/renders/usecases/confirm-upload-render-job.usecase.js";
 import { MarkRenderJobFailedUseCase } from "./modules/renders/usecases/mark-render-job-failed.usecase.js";
+import { ScrapeThreadsPostUseCase } from "./modules/threads/usecases/scrape-threads-post.usecase.js";
 import { CreateAdminAccessTokenUseCase } from "./modules/auth/usecases/create-admin-access-token.usecase.js";
 import { VerifyAdminAccessTokenUseCase } from "./modules/auth/usecases/verify-admin-access-token.usecase.js";
 import type { VideoDeliveryClient } from "./core/shared-kernel/contracts/video-delivery-client.js";
@@ -28,6 +30,7 @@ export interface AppContainer {
   executeRenderJobUseCase: ExecuteRenderJobUseCase;
   confirmUploadRenderJobUseCase: ConfirmUploadRenderJobUseCase;
   markRenderJobFailedUseCase: MarkRenderJobFailedUseCase;
+  scrapeThreadsPostUseCase: ScrapeThreadsPostUseCase;
 }
 
 export async function createContainer(): Promise<AppContainer> {
@@ -59,6 +62,7 @@ export async function createContainer(): Promise<AppContainer> {
     verifyAdminAccessTokenUseCase: new VerifyAdminAccessTokenUseCase(prismaClient, systemSecret),
     executeRenderJobUseCase: new ExecuteRenderJobUseCase(prismaClient, renderEngine, storage, videoDelivery),
     confirmUploadRenderJobUseCase: new ConfirmUploadRenderJobUseCase(prismaClient, storage, videoDelivery),
-    markRenderJobFailedUseCase: new MarkRenderJobFailedUseCase(prismaClient)
+    markRenderJobFailedUseCase: new MarkRenderJobFailedUseCase(prismaClient),
+    scrapeThreadsPostUseCase: new ScrapeThreadsPostUseCase(path.resolve(process.cwd(), ".."))
   };
 }

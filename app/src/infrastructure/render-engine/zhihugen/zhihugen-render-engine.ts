@@ -8,6 +8,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { RenderEngine, RenderEngineInput, RenderEngineOutput } from "../../../core/shared-kernel/contracts/render-engine.js";
 import type { ZhihugenJobRequest } from "../../../modules/zhihugen/store/job-helpers.js";
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 
 const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
 const FFPROBE = process.env.FFPROBE_PATH ?? "ffprobe";
@@ -66,31 +67,58 @@ async function generateTts(opts: {
     return;
   }
 
+  // Direct edge-tts path — bypasses Meddler
+  if (model.startsWith("edge-tts/")) {
+    const voiceName = model.replace("edge-tts/", "");
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+    const tmpDir = join(tmpdir(), `edge-tts-${randomUUID()}`);
+    await mkdir(tmpDir, { recursive: true });
+    const { audioFilePath } = await tts.toFile(tmpDir, text);
+    const buf = await (await import("node:fs/promises")).readFile(audioFilePath);
+    await writeFile(outputPath, buf);
+    return;
+  }
+
   const baseUrl = ttsBaseUrl.trim().replace(/\/+$/, "");
-  const res = await fetch(`${baseUrl}/api/tts`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ttsApiKey}`
-    },
-    body: JSON.stringify({ provider, voiceModel: voiceModel || model, text })
-  });
+  const maxAttempts = 3;
+  let lastError: Error | null = null;
 
-  if (!res.ok) {
-    throw new Error(`TTS request failed: ${res.status} ${await res.text().catch(() => "")}`);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (attempt > 1) await new Promise(r => setTimeout(r, attempt * 2000));
+
+    const res = await fetch(`${baseUrl}/api/tts`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${ttsApiKey}`
+      },
+      body: JSON.stringify({ provider, voiceModel: voiceModel || model, text })
+    });
+
+    if (!res.ok) {
+      lastError = new Error(`TTS request failed: ${res.status} ${await res.text().catch(() => "")}`);
+      continue;
+    }
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.startsWith("application/json") || contentType.startsWith("text/")) {
+      const body = await res.text().catch(() => "");
+      lastError = new Error(`TTS returned non-audio response (${contentType}): ${body.slice(0, 300)}`);
+      continue;
+    }
+
+    const buffer = Buffer.from(await res.arrayBuffer());
+    if (buffer.length === 0) {
+      lastError = new Error("TTS returned empty audio response");
+      continue;
+    }
+
+    await writeFile(outputPath, buffer);
+    return;
   }
 
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType.startsWith("application/json") || contentType.startsWith("text/")) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`TTS returned non-audio response (${contentType}): ${body.slice(0, 300)}`);
-  }
-
-  const buffer = Buffer.from(await res.arrayBuffer());
-  if (buffer.length === 0) {
-    throw new Error("TTS returned empty audio response");
-  }
-  await writeFile(outputPath, buffer);
+  throw lastError!;
 }
 
 // ── Audio duration ────────────────────────────────────────────────────────────
@@ -149,23 +177,21 @@ export class ZhihugenRenderEngine implements RenderEngine {
     const innerH = height - margin * 2;
     const n = req.images.length;
 
-    // ── Step 1: Generate all TTS audio in parallel, then get durations ───────
+    // ── Step 1: Generate all TTS audio sequentially, then get durations ─────
     progress?.("tts", "started");
     const audioPaths = req.images.map((_, i) => join(workDir, `audio_${i}.mp3`));
 
-    await Promise.all(
-      audioPaths.map((audioPath, i) =>
-        generateTts({
-          text: req.scripts[i] ?? "",
-          model: req.ttsModel,
-          ttsBaseUrl,
-          ttsApiKey,
-          provider,
-          voiceModel,
-          outputPath: audioPath
-        })
-      )
-    );
+    for (let i = 0; i < audioPaths.length; i++) {
+      await generateTts({
+        text: req.scripts[i] ?? "",
+        model: req.ttsModel,
+        ttsBaseUrl,
+        ttsApiKey,
+        provider,
+        voiceModel,
+        outputPath: audioPaths[i]
+      });
+    }
 
     const durations = await Promise.all(audioPaths.map(getAudioDuration));
     progress?.("tts", "completed");
